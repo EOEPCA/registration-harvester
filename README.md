@@ -33,7 +33,7 @@
 
 The EOEPCA+ Registration Harvester is a component of the [Resource Registration](https://eoepca.readthedocs.io/projects/resource-registration/en/latest/) building block.
 
-The functionality of the harvester is expressed through workflows which are defined as [BPMN](https://www.bpmn.org/) processes in the `workflows` directory. 
+The functionality of the harvester is implemented by workflows which are defined as [BPMN](https://www.bpmn.org/) processes in the `workflows` directory. 
 
 The runtime orchestration of the workflows is done by the open-source [Flowable](https://www.flowable.com/open-source) process automation platform.
 

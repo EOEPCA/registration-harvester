@@ -1,0 +1,42 @@
+[project]
+name = "registration-harvester-worker"
+version = "0.1"
+authors = []
+description = "A Flowable External Worker implementation with FastAPI acting as worker for Registration Harvester component"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "requests",
+    "fastapi[standard]",
+    "flowable.external_worker_client"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "flake8"
+]
+test = [
+    "pytest"
+]
+
+[project.urls]
+Homepage = "https://github.com/EOEPCA/registration-harvester"
+Issues = "https://github.com/EOEPCA/registration-harvester/issues"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-q --import-mode=importlib --no-header -rfE --disable-warnings --log-level=INFO"
+testpaths = [
+    "test",
+    "integration",
+]
+
+[tool.black]
+line-length = 120
+target-version = ["py38"]
