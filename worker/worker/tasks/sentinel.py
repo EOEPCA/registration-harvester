@@ -1,10 +1,9 @@
-from worker.log_utils import configure_logging, log_with_context, log_with_job
+from worker.log_utils import configure_logging, log_with_job
 
 configure_logging()
 
 def sentinel_discover_data(job, worker_result_builder):
     log_with_job(message="Discovering new sentinel data ...", job=job)
-
     # job variables
     # for v in job.variables:
     #    log_variable(v)
