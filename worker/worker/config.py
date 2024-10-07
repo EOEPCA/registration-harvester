@@ -1,7 +1,7 @@
 import os
 from typing import get_type_hints, Union
 from dotenv import load_dotenv
-from worker.tasks.sentinel import sentinel_check_data, sentinel_log_data
+from worker.tasks.sentinel import sentinel_discover_data, sentinel_download_data, sentinel_unzip, sentinel_check_integrity, sentinel_extract_metadata, sentinel_register_metadata
 
 # Load configuration
 # The value of a variable is the first of the values found in:
@@ -26,22 +26,54 @@ class HarvesterConfig:
 
     # Name in lower case to skip mapping of env variables
     default_subscriptions = {
-        "sentinel_check_data": {
-            "callback_handler": sentinel_check_data,
+        "sentinel_discover_data": {
+            "callback_handler": sentinel_discover_data,
             "lock_duration": "PT1M",
             "number_of_retries": 5,
             "scope_type": None,
             "wait_period_seconds": 1,
             "number_of_tasks": 1
         },
-        "sentinel_log_data": {
-            "callback_handler": sentinel_log_data,
+        "sentinel_download_data": {
+            "callback_handler": sentinel_download_data,
             "lock_duration": "PT1M",
             "number_of_retries": 5,
             "scope_type": None,
             "wait_period_seconds": 1,
             "number_of_tasks": 1
         },
+        "sentinel_unzip": {
+            "callback_handler": sentinel_unzip,
+            "lock_duration": "PT1M",
+            "number_of_retries": 5,
+            "scope_type": None,
+            "wait_period_seconds": 1,
+            "number_of_tasks": 1
+        },
+        "sentinel_check_integrity": {
+            "callback_handler": sentinel_check_integrity,
+            "lock_duration": "PT1M",
+            "number_of_retries": 5,
+            "scope_type": None,
+            "wait_period_seconds": 1,
+            "number_of_tasks": 1
+        },
+        "sentinel_extract_metadata": {
+            "callback_handler": sentinel_extract_metadata,
+            "lock_duration": "PT1M",
+            "number_of_retries": 5,
+            "scope_type": None,
+            "wait_period_seconds": 1,
+            "number_of_tasks": 1
+        },
+        "sentinel_register_metadata": {
+            "callback_handler": sentinel_register_metadata,
+            "lock_duration": "PT1M",
+            "number_of_retries": 5,
+            "scope_type": None,
+            "wait_period_seconds": 1,
+            "number_of_tasks": 1
+        },           
     }    
 
     """

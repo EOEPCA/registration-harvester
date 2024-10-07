@@ -1,14 +1,9 @@
-from worker.log_utils import configure_logging, log_with_context
+from worker.log_utils import configure_logging, log_with_context, log_with_job
 
 configure_logging()
 
-def sentinel_check_data(job, worker_result_builder):
-    log_context = {
-        "JOB": job.id,
-        "PROCESS_INSTANCE": job.process_instance_id,
-        "TASK": job.element_name,
-    }
-    log_with_context("sentinel_check_data", log_context)    
+def sentinel_discover_data(job, worker_result_builder):
+    log_with_job(message="Discovering new sentinel data ...", job=job)
 
     # job variables
     # for v in job.variables:
@@ -24,13 +19,27 @@ def sentinel_check_data(job, worker_result_builder):
     
     return result
 
-def sentinel_log_data(job, worker_result_builder):
-    log_context = {
-        "JOB": job.id,
-        "PROCESS_INSTANCE": job.process_instance_id,
-        "TASK": job.element_name,
-    }
-    log_with_context("sentinel_log_data", log_context) 
-    
+def sentinel_download_data(job, worker_result_builder):
+    log_with_job(message="Downloading data ...", job=job)
+    result =  worker_result_builder.success()
+    return result
+
+def sentinel_unzip(job, worker_result_builder):
+    log_with_job(message="Unzipping ...", job=job)
+    result =  worker_result_builder.success()
+    return result
+
+def sentinel_check_integrity(job, worker_result_builder):
+    log_with_job(message="Checking integrity ...", job=job)
+    result =  worker_result_builder.success()
+    return result
+
+def sentinel_extract_metadata(job, worker_result_builder):
+    log_with_job(message="Extracting metadata and creating STAC item ...", job=job)
+    result =  worker_result_builder.success()
+    return result
+
+def sentinel_register_metadata(job, worker_result_builder):
+    log_with_job(message="Registering STAC item ...", job=job)
     result =  worker_result_builder.success()
     return result

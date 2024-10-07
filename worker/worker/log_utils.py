@@ -8,6 +8,14 @@ def configure_logging():
         datefmt="%Y-%m-%dT%H:%M:%S"
     )    
 
+def log_with_job(message, job=None, log_level='info', **kwargs):
+    log_function = __get_log_function(log_level)
+
+    if job is not None:
+        log_function(f"[BPMN_TASK:  {job.element.id}] {message}", **kwargs)
+    else:
+        log_function(message, **kwargs)
+
 def log_with_context(message, context=None, log_level='info', **kwargs):
     context = context if context is not None else {}
     log_function = __get_log_function(log_level)
