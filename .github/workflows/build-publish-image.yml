@@ -11,14 +11,14 @@ jobs:
     name: Code linting, format checking
     runs-on: ubuntu-latest
     steps:
-      - name: Chechout project
+      - name: Checkout project
         uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11' 
       - name: Install dependencies
-        run: python -m pip install --upgrade pip flake8 black pytest
+        run: python -m pip install --upgrade pip flake8 black pytest hatch   
       - name: Analyse code
         run: flake8 --max-line-length 120 --count --statistics src/
       - name: Check code format
@@ -34,17 +34,19 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Checkout project
+        uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.11' 
       - name: Install dependencies
         run: python -m pip install --upgrade pip hatch
       - name: Determine harvester version
         run: |
           hatch version
           echo "HARVESTER_VERSION=$(hatch version)" >> $GITHUB_ENV
-          echo $HARVESTER_VERSION
+          echo $HARVESTER_VERSION            
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
