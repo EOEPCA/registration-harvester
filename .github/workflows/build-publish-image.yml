@@ -7,6 +7,22 @@ on:
   pull_request:
     branches: [ main ]
 jobs:
+  check_project:
+    name: Code linting, format checking and testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' 
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip flake8 black pytest
+      - name: Analyse code
+        run: flake8 --max-line-length 120 --count --statistics src/
+      - name: Check code format
+        run: black --check --diff --color src/
+      - name: Run tests
+        run: pytest   
   push_to_registry:
     name: Build and push Docker image to Docker Hub
     runs-on: ubuntu-latest
@@ -18,8 +34,16 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip hatch
+      - name: Determine harvester version
+        run: echo "HARVESTER_VERSION=$(hatch version)" >> $GITHUB_ENV        
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: eoepca/registration-harvester:latest,eoepca/registration-harvester:${{ github.ref_name }}
+          tags: eoepca/registration-harvester:latest,eoepca/registration-harvester:${{ env.HARVESTER_VERSION }}
