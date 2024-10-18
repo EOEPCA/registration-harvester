@@ -22,7 +22,7 @@ dependencies = [
     "requests",
     "fastapi[standard]",
     "registration-library @ git+https://github.com/EOEPCA/registration-library",
-    "flowable.external-worker-client @ git+https://github.com/EOEPCA/eoepca-flowable-external-client-python@develop"
+    "flowable.external-worker-client @ git+https://github.com/EOEPCA/eoepca-flowable-external-client-python@main"
 ]
 
 [project.optional-dependencies]
