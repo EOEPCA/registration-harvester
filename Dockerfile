@@ -1,4 +1,3 @@
-# Basis-Image verwenden
 FROM python:3.11-slim
 
 # Any python libraries that require system libraries to be installed will likely
@@ -9,13 +8,8 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-WORKDIR /code
+WORKDIR /app
+COPY . /app
+RUN python -m pip install --no-cache-dir --upgrade /app
 
-COPY ./worker /code/app
-COPY ./README.md /code/app/README.md
-COPY ./LICENSE /code/app/LICENSE
-COPY ./etc /code/etc
-
-RUN python -m pip install --no-cache-dir --upgrade /code/app
-
-CMD ["fastapi", "run", "app/main.py", "--port", "8080"]
+CMD ["fastapi", "run", "src/worker/sentinel/main.py", "--port", "8080"]

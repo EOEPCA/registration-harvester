@@ -14,7 +14,7 @@
 <br />
 <p align="center">
   <a href="https://github.com/EOEPCA/registration-harvester">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
+    <img src="https://raw.githubusercontent.com/EOEPCA/resource-registration/main/docs/img/eoepca-logo.png" alt="Logo" width="80" height="80">
   </a>
 
   <h3 align="center">EOEPCA+ Registration Harvester</h3>
