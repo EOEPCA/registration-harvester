@@ -21,9 +21,8 @@ classifiers = [
 dependencies = [
     "requests",
     "fastapi[standard]",
-    "flowable.external_worker_client",
     "registration-library @ git+https://github.com/EOEPCA/registration-library",
-#    "flowable.external-worker-client @ git+https://github.com/EOEPCA/eoepca-flowable-external-client-python@develop"
+    "flowable.external-worker-client @ git+https://github.com/EOEPCA/eoepca-flowable-external-client-python@develop"
 ]
 
 [project.optional-dependencies]
