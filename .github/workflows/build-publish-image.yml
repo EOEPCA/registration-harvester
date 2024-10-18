@@ -11,6 +11,8 @@ jobs:
     name: Code linting, format checking and testing
     runs-on: ubuntu-latest
     steps:
+      - name: Chechout project
+        uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
