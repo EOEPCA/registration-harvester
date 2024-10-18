@@ -22,7 +22,7 @@ dependencies = [
     "requests",
     "fastapi[standard]",
     "flowable.external_worker_client",
-#    "registration-library @ git+https://github.com/EOEPCA/registration-library",
+    "registration-library @ git+https://github.com/EOEPCA/registration-library",
 #    "flowable.external-worker-client @ git+https://github.com/EOEPCA/eoepca-flowable-external-client-python@develop"
 ]
 
@@ -38,6 +38,9 @@ test = [
 [project.urls]
 Homepage = "https://github.com/EOEPCA/registration-harvester"
 Issues = "https://github.com/EOEPCA/registration-harvester/issues"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"
