@@ -1,4 +1,3 @@
-import json
 from worker.common.log_utils import configure_logging, log_with_job, log_variable
 
 configure_logging()
@@ -9,18 +8,10 @@ def sentinel_discover_data(job, worker_result_builder):
 
     # discovering scenes
     scenes = []
-    scene1 = {
-        "scene": {
-            "name": "scene1"
-        }        
-    }
-    scene2 = {
-        "scene": {
-            "name": "scene2"
-        }  
-    }    
+    scene1 = {"scene": {"name": "scene1"}}
+    # scene2 = {"scene": {"name": "scene2"}}
     scenes.append(scene1)
-    #scenes.append(scene2)
+    # scenes.append(scene2)
 
     # build result
     result = worker_result_builder.success()
@@ -31,10 +22,12 @@ def sentinel_discover_data(job, worker_result_builder):
 
     return result
 
+
 def sentinel_order_data(job, worker_result_builder):
     log_with_job(message="Ordering data ...", job=job)
     result = worker_result_builder.success()
     return result
+
 
 def sentinel_download_data(job, worker_result_builder):
     log_with_job(message="Downloading data ...", job=job)
@@ -42,9 +35,10 @@ def sentinel_download_data(job, worker_result_builder):
     # get job variables
     for v in job.variables:
         log_variable(variable=v, job=job, log_level="info")
-        
+
     result = worker_result_builder.success()
     return result
+
 
 def sentinel_unzip(job, worker_result_builder):
     log_with_job(message="Unzipping ...", job=job)
@@ -52,7 +46,7 @@ def sentinel_unzip(job, worker_result_builder):
     # get job variables
     for v in job.variables:
         log_variable(variable=v, job=job, log_level="info")
-        
+
     result = worker_result_builder.success()
     return result
 
@@ -70,12 +64,12 @@ def sentinel_check_integrity(job, worker_result_builder):
 
     scene = job_vars["scene"]
     log_with_job(f"Input variable: scene={scene}")
-    
-    scene['collection'] = "sentinel-1"
-    #scene['collection'] = ""
+
+    scene["collection"] = "sentinel-1"
+    # scene['collection'] = ""
     log_with_job(f"Output variable: scene={scene}")
     result = worker_result_builder.success()
-    result.variable_string(name="collection", value=scene['collection'])
+    result.variable_string(name="collection", value=scene["collection"])
 
     return result
 
@@ -86,7 +80,7 @@ def sentinel_extract_metadata(job, worker_result_builder):
     # get job variables
     for v in job.variables:
         log_variable(variable=v, job=job, log_level="info")
-        
+
     result = worker_result_builder.success()
     return result
 
@@ -97,9 +91,10 @@ def sentinel_register_metadata(job, worker_result_builder):
     # get job variables
     for v in job.variables:
         log_variable(variable=v, job=job, log_level="info")
-        
+
     result = worker_result_builder.success()
     return result
+
 
 def sentinel_inventory_update(job, worker_result_builder):
     log_with_job(message="Updating inventory ...", job=job)
@@ -107,7 +102,7 @@ def sentinel_inventory_update(job, worker_result_builder):
     # get job variables
     for v in job.variables:
         log_variable(variable=v, job=job, log_level="info")
-        
+
     result = worker_result_builder.success()
     return result
 
