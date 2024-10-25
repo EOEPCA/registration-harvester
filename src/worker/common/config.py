@@ -25,6 +25,7 @@ class WorkerConfig:
     FLOWABLE_REST_PASSWORD: str = "eoepca"
     FLOWABLE_HOST_CACERT: str = "etc/eoepca-ca-chain.pem"
     FLOWABLE_USE_TLS: bool = True
+    LOG_LEVEL: str = "INFO"
 
     """
     Map environment variables to class fields according to these rules:
