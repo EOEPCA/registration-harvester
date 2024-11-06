@@ -1,34 +1,17 @@
 import logging
 from datetime import datetime
-from flowable.external_worker_client import ExternalWorkerClient
-from requests.auth import HTTPBasicAuth
-from worker.common.config import Config
 from worker.common.log_utils import configure_logging
+from worker.common.client import flowableClient
 
 logger = logging.getLogger()
 configure_logging()
-
-
-def customize_session(session):
-    if Config.FLOWABLE_USE_TLS and session is not None:
-        session.verify = Config.FLOWABLE_HOST_CACERT
-        return session
-    else:
-        return None
 
 
 class SubscriptionManager:
     """ """
 
     def __init__(self):
-        self.client = ExternalWorkerClient(
-            flowable_host=Config.FLOWABLE_HOST,
-            auth=HTTPBasicAuth(
-                Config.FLOWABLE_REST_USER,
-                Config.FLOWABLE_REST_PASSWORD,
-            ),
-            customize_session=customize_session,
-        )
+        self.client = flowableClient
         self.subscriptions = {}
 
     def subscriptions_info(self):
