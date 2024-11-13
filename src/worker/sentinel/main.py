@@ -3,10 +3,8 @@ from contextlib import asynccontextmanager
 from worker.common.config import Config
 from worker.common.manager import SubscriptionManager
 from worker.common.log_utils import configure_logging
-from worker.sentinel.tasks import tasks_config
 
 manager = SubscriptionManager()
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,12 +17,7 @@ async def lifespan(app: FastAPI):
     # end all subs before fastapi server shutdown
     manager.unsubscribe_all()
 
-
 app = FastAPI(lifespan=lifespan)
-
-for topic in tasks_config:
-    manager.subscribe(topic=topic, settings=tasks_config[topic])
-
 
 @app.get("/subscriptions")
 def get_subscriptions():
