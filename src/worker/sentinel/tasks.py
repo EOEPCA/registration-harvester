@@ -1,7 +1,10 @@
 import os
-import datetime
+from datetime import datetime
 import time
-import json
+import requests
+import netrc
+import zipfile
+from pathlib import Path
 from dateutil.parser import parse
 from worker.common.log_utils import configure_logging, log_with_context
 from worker.common.types import ExternalJob, JobResultBuilder, JobResult
@@ -10,6 +13,7 @@ from registration_library.providers import esa_cdse as cdse
 from worker.common.task_handler import TaskHandler
 
 configure_logging()
+
 
 class SentinelDiscoverHandler(TaskHandler):
     def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult :
@@ -59,19 +63,169 @@ class SentinelDiscoverHandler(TaskHandler):
         return result.success().variable_json(name="scenes", value=scenes)
 
 
-def sentinel_download_data(job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
-    log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
-    log_with_context("Downloading data ...", log_context)
+class SentinelDownloadHandler(TaskHandler):
+    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult :
+        self.log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
+        log_with_context("Downloading data ...", self.log_context)
 
-    # get job variables
-    log_with_context(job.get_variable("scene"), log_context)
+        log_with_context(f"{self.handler_config=}")
 
-    return result.success()
+        log_with_context("Start waiting for 5 seconds", self.log_context)
+        time.sleep(5)
 
+        scene = job.get_variable("scene")
+        if 'cdse_id' not in scene and 'uid' in scene:
+                scene['cdse_id'] = scene['uid']
 
-def sentinel_unzip(job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
-    log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
-    log_with_context("Unzipping ...", log_context)
+        print(f"{scene=}")
+
+        # TODO: Calculate scene path according to https://gitlab.dlr.de/terrabyte/data-management/ingestion/terrabyte-ingestion-lib/-/blob/main/terrabyte/ingestion/providers/esa_cdse.py#L241-251
+        scene_path = Path(self._get_scene_path(self.handler_config['base_dir'], scene))
+        print(f"{scene_path=}")
+
+        # CDSE download url
+        if scene['scene_id'].startswith('S1'):
+            url = f"https://download.dataspace.copernicus.eu/odata/v1/Products({scene['uid']})/$value" #$zip
+        else:
+            url = f"https://download.dataspace.copernicus.eu/odata/v1/Products({scene['uid']}))/$value" 
+        access_key = self._get_access_token()
+        log_with_context(f"access_key: {access_key}", self.log_context)
+        headers = {"Authorization": f"Bearer {access_key}"}
+
+        time_start = time.perf_counter()
+
+        try:
+            session = requests.Session()
+            session.headers.update(headers)
+            response = session.get(url, stream=True)
+            response.raise_for_status()
+            
+            if scene_path.suffix in ['.SAFE', '.SEN3']: 
+                scene_path = scene_path.parent / f"{scene['scene_id']}.zip"
+            scene_path.parent.mkdir(parents=True, exist_ok=True)
+            with scene_path.open(mode="wb") as file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        file.write(chunk)
+            if scene_path.suffix == '.zip':
+                if not zipfile.is_zipfile(scene_path):
+                    scene_path.unlink(missing_ok=True)
+                    raise Exception("File downloaded is not a valid zip file, remove file")
+            elif scene_path.suffix == '.nc':
+                pass
+        except requests.RequestException as e:
+            error_messages = {
+                404: "Download not found",
+                403: "Download failed - Access denied",
+                504: "Download timeout",
+            }
+            status_code = getattr(e.response, 'status_code', None)
+            error_msg = error_messages.get(status_code, "Download failed")
+            log_with_context(f"{error_msg} for {url}: {str(e)}", self.log_context)
+            return result.failure()
+        except Exception as e:
+            log_with_context(f"Download failed for {url}: {str(e)}", self.log_context)
+            return result.failure()
+
+        time_end = time.perf_counter()
+
+        return (
+            result.success()
+                .variable_string(name="zip_file", value=str(scene_path))
+                .variable_int(name="time", value=int(time_end-time_start))
+                .variable_int(name="file_size", value=scene_path.stat().st_size / (1024 * 1024))
+        )
+
+    def _get_scene_path(self, base_dir, scene):
+        print(f"{base_dir=}")
+        s3path = Path(scene['S3Path'].lstrip('/'))
+        return str(Path(base_dir) / s3path)
+
+    def _get_access_token(self):
+        if 'token_expire_time' in os.environ and time.time() <= (float(os.environ['token_expire_time'])-5):
+            return os.environ['s3_access_key']
+
+        print("Need to get a new access token")
+        auth = netrc.netrc().authenticators('dataspace.copernicus.eu')
+        username = auth[0]
+        password = auth[2]
+        auth_server_url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
+        data = {
+            "client_id": "cdse-public",
+            "grant_type": "password",
+            "username": username,
+            "password": password,
+        }
+
+        token_time = time.time()
+        response = requests.post(auth_server_url, data=data, verify=True, allow_redirects=False).json()
+        os.environ['token_expire_time'] = str(token_time + response.get("expires_in", 0))
+        print("New expiration tme for access token: %s" % datetime.fromtimestamp(float(os.environ['token_expire_time'])).strftime("%m/%d/%Y, %H:%M:%S"))
+        os.environ['s3_access_key'] = response.get("access_token", "")
+        return (os.environ['s3_access_key'])
+
+    def _download_data(
+        self, 
+        url,
+        output_dir,
+        file_name=None,
+        chunk_size=1024 * 1000,
+        timeout=300,
+        auth=None,
+        check_size=True,
+        overwrite=False
+    ):
+        """
+        Download single file from USGS M2M by download url
+        """
+
+        print("Waiting for server response...")
+        if auth:
+            r = requests.get(url, stream=True, allow_redirects=True, timeout=timeout, auth=auth)
+        else:
+            r = requests.get(url, stream=True, allow_redirects=True, timeout=timeout)
+        r.raise_for_status()
+
+        expected_file_size = int(r.headers.get("content-length", -1))
+        if file_name is None:
+            try:
+                file_name = r.headers["Content-Disposition"].split('"')[1]
+            except Exception as e:
+                file_name = os.path.basename(url)
+                #raise Exception("Can not automatically identify file_name.")
+        
+        print(f"Filename: {file_name}")
+        file_path = os.path.join(output_dir, file_name)
+        # TODO: Check for existing files and whether they have the correct file size
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
+        if os.path.exists(file_path) and not overwrite:
+            return file_path
+        elif os.path.exists(file_path) and overwrite:
+            print("Removing old file")
+            os.remove(file_path)
+
+        with open(file_path, "wb") as f:
+            start = time.perf_counter()
+            print(f"Download of {file_name} in progress...")
+            for chunk in r.iter_content(chunk_size=chunk_size):
+                f.write(chunk)
+            duration = time.perf_counter() - start
+            
+        file_size = os.stat(file_path).st_size
+        speed = round((file_size / duration) / (1000 * 1000), 2)
+
+        if check_size:
+            if expected_file_size != file_size:
+                os.remove(file_path)
+                raise Exception(f"Failed to download from {url}")
+
+        print(
+            f"Download of {file_name} successful. Average download speed: {speed} MB/s"
+        )
+        return file_path
+
 
     return result.success()
 
