@@ -227,12 +227,46 @@ class SentinelDownloadHandler(TaskHandler):
         return file_path
 
 
-    return result.success()
+class SentinelUnzipHandler(TaskHandler):
+    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult :
+        """
+        Unzips the downloaded Sentinel data file.
 
+        Variables needed:
+            zip_file: Path to the downloaded zip file
 
-def sentinel_check_integrity(job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
-    log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
-    log_with_context("Checking integrity ...", log_context)
+        Variables set:
+            scene_folder: Path to the unzipped scene folder
+        """
+        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
+        log_with_context("Unzipping ...", log_context)
+
+        # get job variables
+        zip_file = job.get_variable("zip_file")
+        log_with_context(f"Input variables: {zip_file=}", log_context)
+        if not zip_file or not os.path.exists(zip_file):
+                    return result.failure()
+
+        try:
+            # Create the output directory (same as zip file but without .zip extension)
+            output_dir = os.path.splitext(zip_file)[0]
+            os.makedirs(output_dir, exist_ok=True)
+
+            with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+                zip_ref.extractall(output_dir)
+            
+            log_with_context(f"Successfully unzipped to: {output_dir}", log_context)
+            
+            # Return success with the path to the unzipped folder
+            return result.success().variable_string(name="scene_folder", value=output_dir)
+
+        except zipfile.BadZipFile:
+            log_with_context(f"Invalid zip file: {zip_file}", log_context)
+            return result.failure()
+        except Exception as e:
+            log_with_context(f"Error unzipping file {zip_file}: {str(e)}", log_context)
+            return result.failure()
+
 
     # get job variables
     scene = job.get_variable("scene")
