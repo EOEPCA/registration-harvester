@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:flowable="http://flowable.org/bpmn" xmlns:design="http://flowable.org/design" targetNamespace="http://flowable.org/test" design:palette="flowable-work-process-palette">
+  <collaboration id="Collaboration">
+    <participant id="Pool_2" name="Landsat Scene Ingestion" processRef="landsatSceneIngestion" />
+  </collaboration>
+  <process id="landsatSceneIngestion" name="Landsat Scene Ingestion" isExecutable="true" flowable:candidateStarterGroups="flowableUser">
+    <extensionElements>
+      <design:stencilid>BPMNDiagram</design:stencilid>
+      <design:creationdate>2024-12-02T11:14:30.747Z</design:creationdate>
+      <design:modificationdate>2024-12-02T11:27:04.613Z</design:modificationdate>
+    </extensionElements>
+    <laneSet id="laneSet_landsatSceneIngestion">
+      <lane id="Lane_3">
+        <flowNodeRef>ExternalWorkerTask_1</flowNodeRef>
+        <flowNodeRef>ExternalWorkerTask_2</flowNodeRef>
+        <flowNodeRef>ExternalWorkerTask_3</flowNodeRef>
+        <flowNodeRef>ExternalWorkerTask_4</flowNodeRef>
+        <flowNodeRef>startnoneevent1</flowNodeRef>
+        <flowNodeRef>EndNoneEvent_4</flowNodeRef>
+        <flowNodeRef>SequenceFlow_3</flowNodeRef>
+        <flowNodeRef>SequenceFlow_4</flowNodeRef>
+        <flowNodeRef>SequenceFlow_5</flowNodeRef>
+        <flowNodeRef>SequenceFlow_6</flowNodeRef>
+        <flowNodeRef>SequenceFlow_2</flowNodeRef>
+      </lane>
+    </laneSet>
+    <serviceTask id="ExternalWorkerTask_1" name="Download scene" flowable:type="external-worker" flowable:topic="landsat_download_data">
+      <extensionElements>
+        <design:stencilid>ExternalWorkerTask</design:stencilid>
+        <design:stencilsuperid>Task</design:stencilsuperid>
+      </extensionElements>
+    </serviceTask>
+    <serviceTask id="ExternalWorkerTask_2" name="Extract tar" flowable:type="external-worker" flowable:topic="landsat_untar">
+      <extensionElements>
+        <design:stencilid>ExternalWorkerTask</design:stencilid>
+        <design:stencilsuperid>Task</design:stencilsuperid>
+      </extensionElements>
+    </serviceTask>
+    <serviceTask id="ExternalWorkerTask_3" name="Extract Metadata" flowable:type="external-worker" flowable:topic="landsat_extract_metadata">
+      <extensionElements>
+        <design:stencilid>ExternalWorkerTask</design:stencilid>
+        <design:stencilsuperid>Task</design:stencilsuperid>
+      </extensionElements>
+    </serviceTask>
+    <serviceTask id="ExternalWorkerTask_4" name="Register Metadata" flowable:type="external-worker" flowable:topic="landsat_register_metadata">
+      <extensionElements>
+        <design:stencilid>ExternalWorkerTask</design:stencilid>
+        <design:stencilsuperid>Task</design:stencilsuperid>
+      </extensionElements>
+    </serviceTask>
+    <startEvent id="startnoneevent1" name="Start scene ingestion" flowable:initiator="initiator" flowable:formFieldValidation="false">
+      <extensionElements>
+        <flowable:work-form-field-validation>false</flowable:work-form-field-validation>
+        <design:stencilid>StartNoneEvent</design:stencilid>
+        <design:display_ref_in_diagram>true</design:display_ref_in_diagram>
+      </extensionElements>
+    </startEvent>
+    <endEvent id="EndNoneEvent_4" name="Done">
+      <extensionElements>
+        <design:stencilid>EndNoneEvent</design:stencilid>
+        <design:display_ref_in_diagram>true</design:display_ref_in_diagram>
+      </extensionElements>
+    </endEvent>
+    <sequenceFlow id="SequenceFlow_3" sourceRef="ExternalWorkerTask_1" targetRef="ExternalWorkerTask_2">
+      <extensionElements>
+        <design:stencilid>SequenceFlow</design:stencilid>
+      </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="SequenceFlow_4" sourceRef="ExternalWorkerTask_2" targetRef="ExternalWorkerTask_3">
+      <extensionElements>
+        <design:stencilid>SequenceFlow</design:stencilid>
+      </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="SequenceFlow_5" sourceRef="ExternalWorkerTask_3" targetRef="ExternalWorkerTask_4">
+      <extensionElements>
+        <design:stencilid>SequenceFlow</design:stencilid>
+      </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="SequenceFlow_6" sourceRef="ExternalWorkerTask_4" targetRef="EndNoneEvent_4">
+      <extensionElements>
+        <design:stencilid>SequenceFlow</design:stencilid>
+      </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="SequenceFlow_2" sourceRef="startnoneevent1" targetRef="ExternalWorkerTask_1">
+      <extensionElements>
+        <design:stencilid>SequenceFlow</design:stencilid>
+      </extensionElements>
+    </sequenceFlow>
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Collaboration">
+    <bpmndi:BPMNPlane id="BPMNPlane_Collaboration" bpmnElement="Collaboration">
+      <bpmndi:BPMNShape id="BPMNShape_Pool_2" bpmnElement="Pool_2">
+        <omgdc:Bounds x="365" y="-44" width="927" height="204" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Lane_3" bpmnElement="Lane_3">
+        <omgdc:Bounds x="395" y="-44" width="897" height="204" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ExternalWorkerTask_1" bpmnElement="ExternalWorkerTask_1">
+        <omgdc:Bounds x="587" y="16" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ExternalWorkerTask_2" bpmnElement="ExternalWorkerTask_2">
+        <omgdc:Bounds x="737" y="16" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ExternalWorkerTask_3" bpmnElement="ExternalWorkerTask_3">
+        <omgdc:Bounds x="887" y="16" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ExternalWorkerTask_4" bpmnElement="ExternalWorkerTask_4">
+        <omgdc:Bounds x="1037" y="16" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_startnoneevent1" bpmnElement="startnoneevent1">
+        <omgdc:Bounds x="487" y="41" width="30" height="30" />
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="432.7" y="75" width="127" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_EndNoneEvent_4" bpmnElement="EndNoneEvent_4">
+        <omgdc:Bounds x="1187" y="42" width="28" height="28" />
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="1187.8" y="74" width="32" height="18" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_3" bpmnElement="SequenceFlow_3" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="687" y="56" />
+        <omgdi:waypoint x="737" y="56" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_4" bpmnElement="SequenceFlow_4" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="837" y="56" />
+        <omgdi:waypoint x="887" y="56" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_5" bpmnElement="SequenceFlow_5" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="987" y="56" />
+        <omgdi:waypoint x="1037" y="56" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_6" bpmnElement="SequenceFlow_6" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
+        <omgdi:waypoint x="1137" y="56" />
+        <omgdi:waypoint x="1187" y="56" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_2" bpmnElement="SequenceFlow_2" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="517" y="56" />
+        <omgdi:waypoint x="587" y="56" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
