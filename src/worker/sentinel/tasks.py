@@ -70,9 +70,6 @@ class SentinelDownloadHandler(TaskHandler):
 
         log_with_context(f"{self.handler_config=}")
 
-        log_with_context("Start waiting for 5 seconds", self.log_context)
-        time.sleep(5)
-
         scene = job.get_variable("scene")
         if 'cdse_id' not in scene and 'uid' in scene:
                 scene['cdse_id'] = scene['uid']
