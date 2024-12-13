@@ -8,6 +8,19 @@ worker:
     sentinel_download_data:
       module: worker.sentinel.tasks
       handler: SentinelDownloadHandler
+    sentinel_unzip:
+      module: worker.sentinel.tasks
+      handler: SentinelUnzipHandler
+    sentinel_check_integrity:
+      module: worker.sentinel.tasks
+      handler: SentinelCheckIntegrityHandler
+    sentinel_extract_metadata:
+      module: worker.sentinel.tasks
+      handler: SentinelExtractMetadataHandler
+    sentinel_register_metadata:
+      module: worker.sentinel.tasks
+      handler: SentinelRegisterMetadataHandler
+
 
   handlers:
     SentinelDiscoverHandler:
@@ -17,7 +30,31 @@ worker:
     SentinelDownloadHandler:
       subscription_config:
         number_of_retries: 20
+        lock_duration: PT30M  # 30 minute lock duration
       handler_config:
-        download_timeout: 10
-        base_dir: /data/sentinel
+        base_dir: /tmp/sentinel
+        retryTimeout: 10
 
+    SentinelUnzipHandler:
+      subscription_config:
+        number_of_retries: 10
+        lock_duration: PT10M  # 10 minute lock duration
+
+    SentinelCheckIntegrityHandler:
+      subscription_config:
+        number_of_retries: 10
+        lock_duration: PT10M  # 10 minute lock duration
+
+    SentinelExtractMetadataHandler:
+      subscription_config:
+        number_of_retries: 10
+        lock_duration: PT5M  # 5 minute lock duration
+
+    SentinelRegisterMetadataHandler:
+      subscription_config:
+        number_of_retries: 10
+        lock_duration: PT5M  # 5 minute lock duration
+      handler_config:
+        api_url: ""
+        api_user: ""
+        api_pw: ""

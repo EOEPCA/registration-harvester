@@ -1,15 +1,17 @@
 import os
-from datetime import datetime
+import datetime
 import time
 import requests
 import netrc
 import zipfile
 from pathlib import Path
 from dateutil.parser import parse
-from worker.common.log_utils import configure_logging, log_with_context
+from worker.common.log_utils import configure_logging, log_with_context, format_duration, format_file_metrics
 from worker.common.types import ExternalJob, JobResultBuilder, JobResult
 from worker.common.client import flowableClient
 from registration_library.providers import esa_cdse as cdse
+from registration_library.datasets import sentinel
+from registration_library.resources import stac
 from worker.common.task_handler import TaskHandler
 
 configure_logging()
@@ -225,26 +227,29 @@ class SentinelUnzipHandler(TaskHandler):
             scene_folder: Path to the unzipped scene folder
         """
         log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
-        log_with_context("Unzipping ...", log_context)
+        time_start = time.perf_counter()
 
         # get job variables
         zip_file = job.get_variable("zip_file")
+        scene = job.get_variable("scene")
         log_with_context(f"Input variables: {zip_file=}", log_context)
-        if not zip_file or not os.path.exists(zip_file):
-                    return result.failure()
+        if not zip_file or not os.path.exists(zip_file) or not zip_file.endswith('.zip'):
+            log_with_context("Invalid input variables", log_context)
+            return result.failure()
 
         try:
             # Create the output directory (same as zip file but without .zip extension)
-            output_dir = os.path.splitext(zip_file)[0]
-            os.makedirs(output_dir, exist_ok=True)
+            output_dir = os.path.dirname(zip_file)
 
             with zipfile.ZipFile(zip_file, 'r') as zip_ref:
                 zip_ref.extractall(output_dir)
+
+            os.remove(zip_file)
             
-            log_with_context(f"Successfully unzipped to: {output_dir}", log_context)
+            time_end = time.perf_counter()
+            log_with_context(f"Successfully unzipped {scene['scene_id']} to: {output_dir}, {format_duration(time_end - time_start)}", log_context)
             
-            # Return success with the path to the unzipped folder
-            return result.success().variable_string(name="scene_folder", value=output_dir)
+            return result.success().variable_string(name="scene_folder", value=os.path.join(output_dir, scene['scene_id']))
 
         except zipfile.BadZipFile:
             log_with_context(f"Invalid zip file: {zip_file}", log_context)
@@ -254,91 +259,85 @@ class SentinelUnzipHandler(TaskHandler):
             return result.failure()
 
 
-    # get job variables
-    scene = job.get_variable("scene")
-    log_with_context(f"Input variable: scene={scene}", log_context)
+class SentinelCheckIntegrityHandler(TaskHandler):
+    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult :
+        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
 
-    # scene["collection"] = "sentinel-1"
-    scene["collection"] = ""
-    log_with_context(f"Output variable: scene={scene}", log_context)
+        # get job variables
+        scene = job.get_variable("scene")
+        scene_folder = job.get_variable("scene_folder")
+        log_with_context(f"Input variables: {scene_folder=}", log_context)
 
-    return (
-        result.success()
-        .variable_string(name="collection", value=scene["collection"])
-        .variable_json(name="scene", value=scene)
-    )
+        if not scene_folder or not os.path.exists(scene_folder):
+            log_with_context("Invalid input variables", log_context)
+            return result.failure()
 
+        try:
+            validity = sentinel.validate_integrity(scene_folder, scene['scene_id'])
+        except Exception as e:
+            log_with_context(f"Error checking integrity: {str(e)}", log_context)
+            return result.failure()
 
-def sentinel_extract_metadata(job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
-    log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
-    log_with_context("Extracting metadata and creating STAC item ...", log_context)
+        log_with_context(f"Successfully checked integrity for {scene['scene_id']}", log_context)
 
-    # get job variables
-    log_with_context(f"scene={job.get_variable("scene")}", log_context)
-    log_with_context(f"collection={job.get_variable("collection")}", log_context)
-
-    return result.success()
-
-
-def sentinel_register_metadata(job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
-    log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
-    log_with_context("Registering STAC item ...", log_context)
-
-    # get job variables
-    log_with_context(f"scene={job.get_variable("scene")}", log_context)
-    log_with_context(f"collection={job.get_variable("collection")}", log_context)
-
-    return result.success()
+        return (
+            result.success()
+                .variable_boolean(name="validity", value=validity)
+        )
 
 
-# tasks_config = {
-#     "sentinel_discover_data": {
-#         "callback_handler": sentinel_discover_data,
-#         "lock_duration": "PT1M",
-#         "number_of_retries": 5,
-#         "scope_type": None,
-#         "wait_period_seconds": 1,
-#         "number_of_tasks": 1,
-#     },
-    # "sentinel_download_data": {
-    #     "callback_handler": sentinel_download_data,
-    #     "lock_duration": "PT1M",
-    #     "number_of_retries": 5,
-    #     "scope_type": None,
-    #     "wait_period_seconds": 1,
-    #     "number_of_tasks": 1,
-    # },
+class SentinelExtractMetadataHandler(TaskHandler):
+    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult :
+        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
 
-    # "sentinel_unzip": {
-    #     "callback_handler": sentinel_unzip,
-    #     "lock_duration": "PT1M",
-    #     "number_of_retries": 5,
-    #     "scope_type": None,
-    #     "wait_period_seconds": 1,
-    #     "number_of_tasks": 1,
-    # },
-    # "sentinel_check_integrity": {
-    #     "callback_handler": sentinel_check_integrity,
-    #     "lock_duration": "PT1M",
-    #     "number_of_retries": 5,
-    #     "scope_type": None,
-    #     "wait_period_seconds": 1,
-    #     "number_of_tasks": 1,
-    # },
-    # "sentinel_extract_metadata": {
-    #     "callback_handler": sentinel_extract_metadata,
-    #     "lock_duration": "PT1M",
-    #     "number_of_retries": 5,
-    #     "scope_type": None,
-    #     "wait_period_seconds": 1,
-    #     "number_of_tasks": 1,
-    # },
-    # "sentinel_register_metadata": {
-    #     "callback_handler": sentinel_register_metadata,
-    #     "lock_duration": "PT1M",
-    #     "number_of_retries": 5,
-    #     "scope_type": None,
-    #     "wait_period_seconds": 1,
-    #     "number_of_tasks": 1,
-    # },
-# }
+        # get job variables
+        scene = job.get_variable("scene")
+        scene_id = scene['scene_id']
+        scene_folder = job.get_variable("scene_folder")
+        log_with_context(f"Input variables: {scene_folder=}, {scene_id=}", log_context)
+        if not scene_folder or not os.path.exists(scene_folder) or not scene_id or not scene:
+            log_with_context("Invalid input variables", log_context)
+            return result.failure()
+
+        try:
+            stac_item = sentinel.sentinel_metadata(scene_folder, scene_id)
+        except Exception as e:
+            log_with_context(f"Error extracting metadata: {str(e)}", log_context)
+            return result.failure()
+
+        log_with_context(f"Successfully extracted metadata for {scene['scene_id']}", log_context)
+
+        return result.success().variable_string(name="stac_item", value=str(stac_item))
+
+
+class SentinelRegisterMetadataHandler(TaskHandler):
+    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult :
+        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
+
+        # get job variables
+        scene = job.get_variable("scene")
+        collection = job.get_variable("collection")
+        stac_item = job.get_variable("stac_item")
+        log_with_context(f"Input variables: {scene=}, {collection=}", log_context)
+        if not scene or not collection or not stac_item:
+            log_with_context("Invalid input variables", log_context)
+            return result.failure()
+
+        try:
+            stac.register_metadata(
+                stac_file=stac_item,
+                scene_id=scene['scene_id'],
+                inventory_id='unused',
+                inventory_collection='unused',
+                collection=collection,
+                api_user=self.handler_config['api_user'],
+                api_url=self.handler_config['api_url'],
+                api_pw=self.handler_config['api_pw'],
+                inventory_dsn='unused',
+                file_deletion=False
+            )
+
+            return result.success()
+        except Exception as e:
+            log_with_context(f"Error registering metadata: {str(e)}", log_context)
+            return result.failure()
