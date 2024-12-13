@@ -334,7 +334,8 @@ class SentinelRegisterMetadataHandler(TaskHandler):
                 api_url=self.handler_config['api_url'],
                 api_pw=self.handler_config['api_pw'],
                 inventory_dsn='unused',
-                file_deletion=False
+                file_deletion=False,
+                verifiy=False
             )
 
             return result.success()
