@@ -1,18 +1,18 @@
-import os
 import datetime
-import time
-import json
+
 from dateutil.parser import parse
-from worker.common.log_utils import configure_logging, log_with_context
-from worker.common.types import ExternalJob, JobResultBuilder, JobResult
-from worker.common.client import flowableClient
 from registration_library.providers import esa_cdse as cdse
+
+from worker.common.client import flowable_client
+from worker.common.log_utils import configure_logging, log_with_context
 from worker.common.task_handler import TaskHandler
+from worker.common.types import ExternalJob, JobResult, JobResultBuilder
 
 configure_logging()
 
+
 class SentinelDiscoverHandler(TaskHandler):
-    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult :
+    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
         """
         Searches for new data since last workflow execution
 
@@ -36,7 +36,7 @@ class SentinelDiscoverHandler(TaskHandler):
             order_id = job.process_instance_id
 
         if start_time is None and end_time is None:
-            history = flowableClient.get_process_instance_history(job.process_instance_id)
+            history = flowable_client.get_process_instance_history(job.process_instance_id)
             if "startTime" in history:
                 current_time = parse(history["startTime"])  # 2024-03-17T01:02:22.487+0000
                 log_with_context("use startTime from workflow: %s" % current_time, log_context)
@@ -126,45 +126,45 @@ def sentinel_register_metadata(job: ExternalJob, result: JobResultBuilder, confi
 #         "wait_period_seconds": 1,
 #         "number_of_tasks": 1,
 #     },
-    # "sentinel_download_data": {
-    #     "callback_handler": sentinel_download_data,
-    #     "lock_duration": "PT1M",
-    #     "number_of_retries": 5,
-    #     "scope_type": None,
-    #     "wait_period_seconds": 1,
-    #     "number_of_tasks": 1,
-    # },
+# "sentinel_download_data": {
+#     "callback_handler": sentinel_download_data,
+#     "lock_duration": "PT1M",
+#     "number_of_retries": 5,
+#     "scope_type": None,
+#     "wait_period_seconds": 1,
+#     "number_of_tasks": 1,
+# },
 
-    # "sentinel_unzip": {
-    #     "callback_handler": sentinel_unzip,
-    #     "lock_duration": "PT1M",
-    #     "number_of_retries": 5,
-    #     "scope_type": None,
-    #     "wait_period_seconds": 1,
-    #     "number_of_tasks": 1,
-    # },
-    # "sentinel_check_integrity": {
-    #     "callback_handler": sentinel_check_integrity,
-    #     "lock_duration": "PT1M",
-    #     "number_of_retries": 5,
-    #     "scope_type": None,
-    #     "wait_period_seconds": 1,
-    #     "number_of_tasks": 1,
-    # },
-    # "sentinel_extract_metadata": {
-    #     "callback_handler": sentinel_extract_metadata,
-    #     "lock_duration": "PT1M",
-    #     "number_of_retries": 5,
-    #     "scope_type": None,
-    #     "wait_period_seconds": 1,
-    #     "number_of_tasks": 1,
-    # },
-    # "sentinel_register_metadata": {
-    #     "callback_handler": sentinel_register_metadata,
-    #     "lock_duration": "PT1M",
-    #     "number_of_retries": 5,
-    #     "scope_type": None,
-    #     "wait_period_seconds": 1,
-    #     "number_of_tasks": 1,
-    # },
+# "sentinel_unzip": {
+#     "callback_handler": sentinel_unzip,
+#     "lock_duration": "PT1M",
+#     "number_of_retries": 5,
+#     "scope_type": None,
+#     "wait_period_seconds": 1,
+#     "number_of_tasks": 1,
+# },
+# "sentinel_check_integrity": {
+#     "callback_handler": sentinel_check_integrity,
+#     "lock_duration": "PT1M",
+#     "number_of_retries": 5,
+#     "scope_type": None,
+#     "wait_period_seconds": 1,
+#     "number_of_tasks": 1,
+# },
+# "sentinel_extract_metadata": {
+#     "callback_handler": sentinel_extract_metadata,
+#     "lock_duration": "PT1M",
+#     "number_of_retries": 5,
+#     "scope_type": None,
+#     "wait_period_seconds": 1,
+#     "number_of_tasks": 1,
+# },
+# "sentinel_register_metadata": {
+#     "callback_handler": sentinel_register_metadata,
+#     "lock_duration": "PT1M",
+#     "number_of_retries": 5,
+#     "scope_type": None,
+#     "wait_period_seconds": 1,
+#     "number_of_tasks": 1,
+# },
 # }

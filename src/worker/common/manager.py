@@ -1,10 +1,10 @@
-import logging
-import yaml
 import importlib
-from pathlib import Path
+import logging
 from datetime import datetime
+
+from worker.common.client import flowable_client
+from worker.common.config import worker_config
 from worker.common.log_utils import configure_logging
-from worker.common.client import flowableClient
 
 logger = logging.getLogger()
 configure_logging()
@@ -14,24 +14,17 @@ class SubscriptionManager:
     """ """
 
     def __init__(self):
-        self.client = flowableClient
+        self.client = flowable_client
         self.subscriptions = {}
         self._subscribe_handlers_from_config()
 
-
     def _subscribe_handlers_from_config(self):
-        # Load config
-        config_path = Path(__file__).parent.parent.parent.parent / "etc/config.yaml"
-        with open(config_path) as f:
-            config_all = yaml.safe_load(f)
-            config_worker = config_all["worker"]
-
         # Create handlers map using config
         handler_instances = {}
-        for topic, handler_config in config_worker["topics"].items():
+        for topic, handler_config in worker_config.get("topics").items():
             module = importlib.import_module(handler_config["module"])
             handler_class = getattr(module, handler_config["handler"])
-            handler = handler_class(config_worker["handlers"])
+            handler = handler_class(worker_config.get("handlers"))
             handler_instances[topic] = handler
 
         # Subscribe handlers
@@ -41,7 +34,7 @@ class SubscriptionManager:
                 settings={
                     "callback_handler": handler.execute,
                     **handler.subscription_config,
-                }
+                },
             )
 
     def subscriptions_info(self):

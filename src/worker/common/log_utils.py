@@ -1,10 +1,11 @@
 import logging
-from worker.common.config import Config
+
+from worker.common.config import worker_config
 
 
 def configure_logging():
     logging.basicConfig(
-        level=__get_log_level(Config.LOG_LEVEL),
+        level=__get_log_level(worker_config.get("log_level")),
         format="%(asctime)s.%(msecs)03d [%(levelname)s] [%(thread)d] %(message)s",
         handlers=[logging.StreamHandler()],
         datefmt="%Y-%m-%dT%H:%M:%S",
@@ -28,8 +29,8 @@ def __get_log_context_prefix(context):
         log_context_prefix = "["
         for k, v in context.items():
             if v is not None:
-                log_context_prefix += f"{k}: {v}"
-        log_context_prefix += "]"
+                log_context_prefix += f"{k}: {v} "
+        log_context_prefix = log_context_prefix.strip() + "]"
     return log_context_prefix
 
 

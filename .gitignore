@@ -133,3 +133,5 @@ venv
 
 # IDE
 .vscode
+
+.local

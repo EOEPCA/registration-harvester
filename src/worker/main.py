@@ -1,8 +1,10 @@
-from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from worker.common.config import Config
-from worker.common.manager import SubscriptionManager
+
+from fastapi import FastAPI
+
+from worker.common.config import worker_config
 from worker.common.log_utils import configure_logging
+from worker.common.manager import SubscriptionManager
 
 manager = SubscriptionManager()
 
@@ -30,11 +32,7 @@ def get_subscriptions():
 @app.get("/config")
 def config():
     # show the configuration
-    config = {}
-    for field in Config.__annotations__:
-        value = getattr(Config, field, None)
-        config[field] = value
-    return {"config": config}
+    return {"config": worker_config.get_all()}
 
 
 @app.get("/health")

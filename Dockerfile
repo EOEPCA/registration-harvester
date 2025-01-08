@@ -8,8 +8,8 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-COPY . /app
-RUN python -m pip install --no-cache-dir --upgrade /app
+WORKDIR /worker
+COPY . /worker
+RUN python -m pip install --no-cache-dir --upgrade /worker
 
-CMD ["fastapi", "run", "src/worker/sentinel/main.py", "--port", "8080"]
+CMD ["fastapi", "run", "src/worker/main.py", "--port", "8080"]

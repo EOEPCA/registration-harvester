@@ -22,7 +22,7 @@ jobs:
       - name: Analyse code
         run: flake8 --max-line-length 120 --count --statistics src/
       - name: Check code format
-        run: black --check --diff --color src/   
+        run: black --check --diff --color src/
   push_to_registry:
     name: Build and push Docker image to Docker Hub
     runs-on: ubuntu-latest

@@ -21,8 +21,11 @@ classifiers = [
 dependencies = [
     "requests",
     "fastapi[standard]",
+    "stactools-landsat",
+    "setuptools",
     "registration-library @ git+https://github.com/EOEPCA/registration-library",
-    "flowable.external-worker-client @ git+https://github.com/EOEPCA/eoepca-flowable-external-client-python"
+    "flowable.external-worker-client @ git+https://github.com/EOEPCA/eoepca-flowable-external-client-python",
+    "eodm @ git+https://github.com/geopython/eodm"
 ]
 
 [project.optional-dependencies]
@@ -52,3 +55,8 @@ testpaths = [
 [tool.black]
 line-length = 120
 target-version = ["py38", "py39", "py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 120
+indent-width = 4
+target-version = "py310"

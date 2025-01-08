@@ -2,12 +2,6 @@ services:
     harvester-worker:
         image: eoepca/registration-harvester-worker:latest
         container_name: registration-harvester-worker
-        environment:
-            - FLOWABLE_HOST=${FLOWABLE_HOST}
-            - FLOWABLE_REST_USER=${FLOWABLE_REST_USER}
-            - FLOWABLE_REST_PASSWORD=${FLOWABLE_REST_PASSWORD}
-            - FLOWABLE_USE_TLS=${FLOWABLE_USE_TLS}
-            - FLOWABLE_HOST_CACERT=${FLOWABLE_HOST_CACERT}
         ports:
             - 8080:8080
         restart: always
