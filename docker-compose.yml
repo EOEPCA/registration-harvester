@@ -1,7 +1,11 @@
 services:
     harvester-worker:
-        image: eoepca/registration-harvester-worker:latest
-        container_name: registration-harvester-worker
+        image: eoepca/registration-harvester:latest
+        container_name: registration-harvester
         ports:
             - 8080:8080
+        environment:
+            - CONFIG_FILE_PATH=/worker/config/harvester.yaml
+        volumes:
+            - ./config.yaml:/worker/config/harvester.yaml:ro
         restart: always
