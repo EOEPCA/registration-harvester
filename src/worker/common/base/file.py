@@ -1,5 +1,17 @@
+import hashlib
 import os
 import tarfile
+
+checksum_funcs = dict()
+checksum_funcs["SHA3-256"] = hashlib.sha3_256
+checksum_funcs["MD5"] = hashlib.md5
+
+try:
+    import blake3
+
+    checksum_funcs["BLAKE3"] = blake3.blake3
+except Exception:
+    pass
 
 
 def untar_file(tar_file, remove_tar=True, create_folder=False, base_folder=None):
@@ -83,3 +95,10 @@ def get_folder_size(folder_path):
             stat = os.stat(fp)
             size += stat.st_size
     return size
+
+
+def calculate_checksum(algorithm, check_file):
+    if algorithm not in checksum_funcs:
+        raise Exception("Checksum algorithm not available")
+    checksum = checksum_funcs[algorithm](open(check_file, "rb").read()).hexdigest().lower()
+    return checksum

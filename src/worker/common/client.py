@@ -2,6 +2,7 @@ from flowable.external_worker_client import ExternalWorkerClient
 from requests.auth import HTTPBasicAuth
 
 from worker.common.config import worker_config
+from worker.common.secrets import worker_secrets
 
 
 def customize_session(session):
@@ -17,8 +18,8 @@ flowable_config = worker_config.get("flowable")
 flowable_client = ExternalWorkerClient(
     flowable_host=flowable_config.get("host"),
     auth=HTTPBasicAuth(
-        flowable_config.get("user"),
-        flowable_config.get("password"),
+        worker_secrets.get_secret("flowable_user", ""),
+        worker_secrets.get_secret("flowable_password", ""),
     ),
     customize_session=customize_session,
 )

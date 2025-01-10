@@ -10,6 +10,7 @@ from worker.common.datasets import landsat
 from worker.common.log_utils import configure_logging, log_with_context
 from worker.common.providers import usgs
 from worker.common.resources import stac
+from worker.common.secrets import worker_secrets
 from worker.common.task_handler import TaskHandler
 from worker.common.types import ExternalJob, JobResult, JobResultBuilder
 from worker.landsat.discovery import search
@@ -20,7 +21,7 @@ configure_logging()
 class LandsatDiscoverHandler(TaskHandler):
     def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
         """
-        Searches for new data
+        Searches for new Landsat data
 
         Variables needed:
             collections
@@ -89,7 +90,7 @@ class LandsatDiscoverHandler(TaskHandler):
 class LandsatContinuousDiscoveryHandler(TaskHandler):
     def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
         """
-        Searches for new data continuously
+        Searches for new Landsat data continuously
 
         Variables needed:
             collections
@@ -135,7 +136,7 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
                     )
 
             except Exception as e:
-                error_msg = str(e)
+                error_msg = repr(e)
                 log_with_context(error_msg, log_context)
                 return self.task_failure("Error in continous discovery", error_msg, result, retries=3, timeout="PT20M")
 
@@ -175,8 +176,8 @@ class LandsatGetDownloadUrlHandler(TaskHandler):
         log_with_context("Get download urls for discovered scenes ...", log_context)
 
         scenes = job.get_variable("scenes")
-        m2m_api_user = self.get_config("m2m_user", "eoepca")
-        m2m_api_password = self.get_config("m2m_password", "")
+        m2m_api_user = worker_secrets.get_secret("m2m_user", "")
+        m2m_api_password = worker_secrets.get_secret("m2m_password", "")
         m2m_api_use_token = self.get_config("m2m_use_token", True)
         m2m_api_url = self.get_config("m2m_api_url", "https://m2m.cr.usgs.gov/api/api/json/stable/")
 

@@ -23,6 +23,7 @@ dependencies = [
     "fastapi[standard]",
     "stactools-landsat",
     "setuptools",
+    "blake3",
     "registration-library @ git+https://github.com/EOEPCA/registration-library",
     "flowable.external-worker-client @ git+https://github.com/EOEPCA/eoepca-flowable-external-client-python",
     "eodm @ git+https://github.com/geopython/eodm"

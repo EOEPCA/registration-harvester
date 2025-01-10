@@ -99,10 +99,14 @@ def login(username: str, password: str, token=False, api_url="https://m2m.cr.usg
         payload = {"username": username, "password": password}
         print("Use login with password")
 
+    retries = 3
     while True:
         api_key = sendJSONRequest(api_url + endpoint, payload)
         if not api_key:
             print("API request failed. Try again...\n")
+            retries = retries - 1
+            if retries == 0:
+                return
         else:
             return api_key
 
