@@ -11,6 +11,9 @@ class WorkerSecrets:
         self.secrets["m2m_password"] = os.environ["M2M_PASSWORD"] if "M2M_PASSWORD" in os.environ else ""
         self.secrets["flowable_user"] = os.environ["FLOWABLE_USER"] if "FLOWABLE_USER" in os.environ else ""
         self.secrets["flowable_password"] = os.environ["FLOWABLE_PASSWORD"] if "FLOWABLE_PASSWORD" in os.environ else ""
+        print(f"{self.secrets["flowable_user"]} - {self.secrets["flowable_password"]}")
+        print(f"{self.secrets["m2m_user"]} - {self.secrets["m2m_password"]}")
+        print(f"{self.secrets["cdse_user"]} - {self.secrets["cdse_password"]}")
 
     def get_secret(self, key: str, default: str) -> dict:
         if key is not None and len(key) > 0:
