@@ -45,11 +45,19 @@ jobs:
       - name: Determine harvester version
         run: |
           hatch version
-          echo "HARVESTER_VERSION=$(hatch version)" >> $GITHUB_ENV         
+          echo "HARVESTER_VERSION=$(hatch version)" >> $GITHUB_ENV
+      - name: Extract metadata for the Docker image
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: eoepca/registration-harvester
+      - name: Print metadata for the Docker image
+        run: |
+          echo "tags=${{ steps.meta.outputs.tags }}"
+          echo "labels=${{ steps.meta.outputs.labels }}"
       - name: Build and push
         uses: docker/build-push-action@v6
-        with:
+        with:          
           push: true
           tags: eoepca/registration-harvester:latest
-          #tags: eoepca/registration-harvester:latest,eoepca/registration-harvester:${{ env.HARVESTER_VERSION }}
-      
+          #tags: eoepca/registration-harvester:latest,eoepca/registration-harvester:${{ env.HARVESTER_VERSION }}      
