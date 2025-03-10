@@ -60,7 +60,8 @@ class StacCollectionHandler(TaskHandler):
 
         item_paths = [item.get_self_href() for item in collection.get_all_items()]
         log_with_context(
-            f"StacCollectionHandler finished publishing collection {collection.id}. Starting {len(item_paths)} StacItemHandler tasks.",
+            f"StacCollectionHandler finished publishing collection {collection.id}. "
+            f"Starting {len(item_paths)} StacItemHandler tasks.",
             log_context,
         )
         return result.success().variable_json(name="item_paths", value=item_paths)
