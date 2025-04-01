@@ -42,18 +42,32 @@ class StacCollectionHandler(TaskHandler):
             item_paths: List of item paths
         """
         log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
+
+        # Get and validate job variables
         collection_path = job.get_variable("collection_paths")
+        if not collection_path:
+            raise ValueError("Missing required variable: collection_path")
+
+        # Get and validate required configuration values
+        url = self.get_config("stac_api_url", "")
+        auth = (self.get_config("stac_api_user", None), self.get_config("stac_api_pw", None))
+        if not url:
+            raise ValueError("Missing required configuration: stac_api_url")
+        if not auth[0] or not auth[1]:
+            raise ValueError("Missing required configuration: stac_api_user or stac_api_pw")
+
+        # Load stac collection
         collection = Collection.from_file(collection_path)
 
         try:
             log_with_context(f"Publishing collection {collection.id}", log_context)
-            load_stac_api_collections(
-                url=self.get_config("stac_api", ""),
+            list(load_stac_api_collections(
+                url=url,
                 collections=[collection],
                 verify=False,
                 update=True,
-                auth=(self.get_config("stac_api_user", None), self.get_config("stac_api_pw", None)),
-            )
+                auth=auth,
+            ))
         except Exception as e:
             log_with_context(f"Error publishing collection: {str(e)}", log_context)
             return result.failure(f"Error publishing collection: {str(e)}")
@@ -79,18 +93,32 @@ class StacItemHandler(TaskHandler):
             None
         """
         log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
+
+        # Get and validate job variables
         item_paths = job.get_variable("item_paths")
+        if not item_paths:
+            raise ValueError("Missing required variable: item_paths")
+        
+        # Get and validate required configuration values
+        url = self.get_config("stac_api_url", "")
+        auth = (self.get_config("stac_api_user", None), self.get_config("stac_api_pw", None))
+        if not url:
+            raise ValueError("Missing required configuration: stac_api_url")
+        if not auth[0] or not auth[1]:
+            raise ValueError("Missing required configuration: stac_api_user or stac_api_pw")
+
+        # Load STAC item
         item = Item.from_file(item_paths)
 
         try:
             log_with_context(f"Publishing item {item.id}", log_context)
-            load_stac_api_items(
-                url=self.get_config("stac_api", ""),
+            list(load_stac_api_items(
+                url=url,
                 items=[item],
                 verify=False,
                 update=True,
-                auth=(self.get_config("stac_api_user", None), self.get_config("stac_api_pw", None)),
-            )
+                auth=auth,
+            ))
         except Exception as e:
             log_with_context(f"Error publishing item: {str(e)}", log_context)
             return result.failure(f"Error publishing item: {str(e)}")
