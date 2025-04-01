@@ -29,3 +29,17 @@ services:
             - ./config-sentinel.yaml:/worker/config/harvester.yaml:ro
             - /eodata:/eodata:rw
         restart: always
+    harvester-worker-static-catalog:
+        image: eoepca/registration-harvester:latest
+        container_name: registration-harvester-static-catalog
+        ports:
+            - "8083:8080"
+        environment:
+            - CONFIG_FILE_PATH=/worker/config/harvester.yaml
+            - FLOWABLE_USER=${FLOWABLE_USER}
+            - FLOWABLE_PASSWORD=${FLOWABLE_PASSWORD}
+            - CDSE_USER=${CDSE_USER}
+            - CDSE_PASSWORD=${CDSE_PASSWORD}
+        volumes:
+            - ./config-static-catalog.yaml:/worker/config/harvester.yaml:ro
+        restart: always

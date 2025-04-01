@@ -1,9 +1,11 @@
+import os
+
+from eodm.load import load_stac_api_collections, load_stac_api_items
 from pystac import Catalog, Collection, Item
 
+from worker.common.log_utils import configure_logging, log_with_context
 from worker.common.task_handler import TaskHandler
 from worker.common.types import ExternalJob, JobResult, JobResultBuilder
-from worker.common.log_utils import configure_logging, log_with_context
-from eodm.load import load_stac_api_collections, load_stac_api_items
 
 configure_logging()
 
@@ -54,20 +56,23 @@ class StacCollectionHandler(TaskHandler):
         if not url:
             raise ValueError("Missing required configuration: stac_api_url")
         if not auth[0] or not auth[1]:
-            raise ValueError("Missing required configuration: stac_api_user or stac_api_pw")
+            auth = None
 
         # Load stac collection
         collection = Collection.from_file(collection_path)
 
         try:
-            log_with_context(f"Publishing collection {collection.id}", log_context)
-            list(load_stac_api_collections(
+            log_with_context(f"Publishing collection {collection.id} ...", log_context)
+            for collection_loaded in load_stac_api_collections(
                 url=url,
                 collections=[collection],
                 verify=False,
                 update=True,
                 auth=auth,
-            ))
+            ):
+                url = os.path.join(url, "collections", collection_loaded.id)
+                log_with_context(url, log_context)
+
         except Exception as e:
             log_with_context(f"Error publishing collection: {str(e)}", log_context)
             return result.failure(f"Error publishing collection: {str(e)}")
@@ -98,27 +103,30 @@ class StacItemHandler(TaskHandler):
         item_paths = job.get_variable("item_paths")
         if not item_paths:
             raise ValueError("Missing required variable: item_paths")
-        
+
         # Get and validate required configuration values
         url = self.get_config("stac_api_url", "")
         auth = (self.get_config("stac_api_user", None), self.get_config("stac_api_pw", None))
         if not url:
             raise ValueError("Missing required configuration: stac_api_url")
         if not auth[0] or not auth[1]:
-            raise ValueError("Missing required configuration: stac_api_user or stac_api_pw")
+            auth = None
 
         # Load STAC item
         item = Item.from_file(item_paths)
 
         try:
-            log_with_context(f"Publishing item {item.id}", log_context)
-            list(load_stac_api_items(
+            log_with_context(f"Publishing item {item.id} ...", log_context)
+            for item_loaded in load_stac_api_items(
                 url=url,
                 items=[item],
                 verify=False,
                 update=True,
                 auth=auth,
-            ))
+            ):
+                url = os.path.join(url, "collections", item_loaded.collection_id, "items", item_loaded.id)
+                log_with_context(f"Successfully published item at {url}", log_context)
+
         except Exception as e:
             log_with_context(f"Error publishing item: {str(e)}", log_context)
             return result.failure(f"Error publishing item: {str(e)}")

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "worker"
-version = "1.0.0"
+version = "1.1.0"
 authors = [
     { name="Mario Winkler", email="mario.winkler@dlr.de" },
     { name="Jonas Eberle", email="jonas.eberle@dlr.de" }
@@ -47,6 +47,8 @@ allow-direct-references = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"
+log_cli = true
+log_cli_level = "INFO"
 addopts = "-q --import-mode=importlib --no-header -rfE --disable-warnings --log-level=INFO"
 testpaths = [
     "test",

@@ -1,0 +1,9 @@
+# Ignore everything
+*
+
+# Allow files and directories
+!/LICENSE
+!/pyproject.toml
+!/README.md
+!/src
+!/tests/data

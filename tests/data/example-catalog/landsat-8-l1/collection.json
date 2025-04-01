@@ -1,11 +1,7 @@
 {
   "type": "Collection",
   "stac_version" : "1.0.0",
-  "stac_extensions" : [
-    "eo",
-    "view",
-    "https://example.com/stac/landsat-extension/1.0/schema.json"
-  ],
+  "stac_extensions" : [],
   "id" : "landsat-8-l1",
   "title" : "Landsat 8 L1",
   "description" : "Landsat 8 imagery radiometrically calibrated and orthorectified using ground points and Digital Elevation Model (DEM) data to correct relief displacement.",
