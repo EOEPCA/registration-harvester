@@ -6,4 +6,5 @@
 !/pyproject.toml
 !/README.md
 !/src
+!/etc/eoepca-ca-chain.pem
 !/tests/data
