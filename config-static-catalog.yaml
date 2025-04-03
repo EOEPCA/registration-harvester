@@ -1,0 +1,43 @@
+worker:
+  log_level: INFO
+  flowable:
+    host: https://registration-harvester-api.develop.eoepca.org/flowable-rest
+    tls: true
+    cacert: ./etc/eoepca-ca-chain.pem
+  topics:
+    stac_publish_catalog:
+      module: worker.stac.tasks
+      handler: StacCatalogHandler
+    stac_publish_collection:
+      module: worker.stac.tasks
+      handler: StacCollectionHandler
+    stac_publish_item:
+      module: worker.stac.tasks
+      handler: StacItemHandler
+  handlers:
+    StacCatalogHandler:
+      subscription:
+        lock_duration: PT10M
+        number_of_retries: 5
+        wait_period_seconds: 1
+        number_of_tasks: 1
+    StacCollectionHandler:
+      subscription:
+        lock_duration: PT10M
+        number_of_retries: 5
+        wait_period_seconds: 1
+        number_of_tasks: 1
+      stac_api_url: https://eoapi.develop.eoepca.org/stac/
+      stac_api_ca_cert: ""
+      stac_api_user: ""
+      stac_api_pw: ""
+    StacItemHandler:
+      subscription:
+        lock_duration: PT10M
+        number_of_retries: 5
+        wait_period_seconds: 1
+        number_of_tasks: 1
+      stac_api_url: https://eoapi.develop.eoepca.org/stac/
+      stac_api_ca_cert: ""      
+      stac_api_user: ""
+      stac_api_pw: ""  
