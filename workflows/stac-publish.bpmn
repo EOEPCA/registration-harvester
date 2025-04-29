@@ -7,7 +7,7 @@
     <extensionElements>
       <design:stencilid><![CDATA[BPMNDiagram]]></design:stencilid>
       <design:creationdate><![CDATA[2025-02-13T08:48:00.120Z]]></design:creationdate>
-      <design:modificationdate><![CDATA[2025-02-25T15:36:58.359Z]]></design:modificationdate>
+      <design:modificationdate><![CDATA[2025-04-29T07:24:08.856Z]]></design:modificationdate>
     </extensionElements>
     <laneSet id="laneSet_sTACPublish">
       <lane id="Lane_2" name="Lane">
@@ -24,14 +24,14 @@
       <extensionElements>
         <design:stencilid><![CDATA[ExpandedSubProcess]]></design:stencilid>
       </extensionElements>
-      <multiInstanceLoopCharacteristics isSequential="false" flowable:collection="collection_paths" flowable:elementVariable="collection_paths">
+      <multiInstanceLoopCharacteristics isSequential="false" flowable:collection="stac_collection_source" flowable:elementVariable="stac_collection_source">
         <extensionElements></extensionElements>
       </multiInstanceLoopCharacteristics>
       <subProcess id="ExpandedSubProcess_4" name="Items">
         <extensionElements>
           <design:stencilid><![CDATA[ExpandedSubProcess]]></design:stencilid>
         </extensionElements>
-        <multiInstanceLoopCharacteristics isSequential="true" flowable:collection="item_paths" flowable:elementVariable="item_paths">
+        <multiInstanceLoopCharacteristics isSequential="true" flowable:collection="stac_item_source" flowable:elementVariable="stac_item_source">
           <extensionElements></extensionElements>
         </multiInstanceLoopCharacteristics>
         <serviceTask id="ServiceTask_14" name="Publish item" flowable:type="external-worker" flowable:topic="stac_publish_item">
