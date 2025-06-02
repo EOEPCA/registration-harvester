@@ -12,6 +12,14 @@ from worker.common.types import ExternalJob, JobResult, JobResultBuilder
 
 configure_logging()
 
+# iam_client_id = worker_secrets.get_secret("cdse_user", "")
+iam_oidc_token_endpoint_url = "https://iam-auth.apx.develop.eoepca.org/realms/eoepca/protocol/openid-connect/token"
+iam_client_id = "registration-harvester"
+iam_client_secret = "Uj1nOvyZ8iFdRN8Iqaik0OkXDS66INU3"
+iam_client = IAMClient(
+    token_endpoint_url=iam_oidc_token_endpoint_url, client_id=iam_client_id, client_secret=iam_client_secret
+)
+
 
 class StacCatalogHandler(TaskHandler):
     def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
@@ -98,18 +106,6 @@ class StacCollectionHandler(TaskHandler):
         if not auth[0] or not auth[1]:
             auth = None
 
-        # Get token to access protected endpoints of catalog
-        iam_oidc_token_endpoint_url = (
-            "https://iam-auth.apx.develop.eoepca.org/realms/eoepca/protocol/openid-connect/token"
-        )
-        iam_client_id = "registration-harvester"
-        iam_client_secret = "Uj1nOvyZ8iFdRN8Iqaik0OkXDS66INU3"
-        iam_client = IAMClient(
-            token_endpoint_url=iam_oidc_token_endpoint_url, client_id=iam_client_id, client_secret=iam_client_secret
-        )
-        token = iam_client.get_access_token()
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
-
         try:
             log_with_context(f"Loading STAC collection from: {stac_collection_source}", log_context)
             # Set up StacIO
@@ -134,6 +130,10 @@ class StacCollectionHandler(TaskHandler):
         except Exception as e:
             log_with_context(f"Error loading collection: {str(e)}", log_context)
             return result.failure()
+
+        # Get token to access protected endpoints of catalog
+        token = iam_client.get_access_token()
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
 
         # Publish stac collection
         try:
@@ -215,15 +215,20 @@ class StacItemHandler(TaskHandler):
             log_with_context(f"Error loading item: {str(e)}", log_context)
             return result.failure()
 
+        # Get token to access protected endpoints of catalog
+        token = iam_client.get_access_token()
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+
         # Publish STAC item
         try:
             log_with_context(f"Publishing item {item.id} ...", log_context)
             for item_loaded in load_stac_api_items(
                 url=url,
                 items=[item],
+                headers=headers,
                 verify=False,
                 update=True,
-                auth=auth,
+                auth=None,
             ):
                 url = os.path.join(url, "collections", item_loaded.collection_id, "items", item_loaded.id)
                 log_with_context(f"Successfully published item at {url}", log_context)
