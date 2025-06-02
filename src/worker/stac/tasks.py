@@ -7,15 +7,15 @@ from pystac import Catalog, Collection, Item, StacIO
 
 from worker.common.iam import IAMClient
 from worker.common.log_utils import configure_logging, log_with_context
+from worker.common.secrets import worker_secrets
 from worker.common.task_handler import TaskHandler
 from worker.common.types import ExternalJob, JobResult, JobResultBuilder
 
 configure_logging()
 
-# iam_client_id = worker_secrets.get_secret("cdse_user", "")
+iam_client_id = worker_secrets.get_secret("iam_client_id", None)
+iam_client_secret = worker_secrets.get_secret("iam_client_secret", None)
 iam_oidc_token_endpoint_url = "https://iam-auth.apx.develop.eoepca.org/realms/eoepca/protocol/openid-connect/token"
-iam_client_id = "registration-harvester"
-iam_client_secret = "Uj1nOvyZ8iFdRN8Iqaik0OkXDS66INU3"
 iam_client = IAMClient(
     token_endpoint_url=iam_oidc_token_endpoint_url, client_id=iam_client_id, client_secret=iam_client_secret
 )

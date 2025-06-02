@@ -30,6 +30,9 @@ class IAMClient:
         return self._access_token
 
     def update_token(self):
+        if self._client_id is None or self._client_secret is None:
+            raise ValueError("IAM credentials missing")
+
         body = {
             "client_id": self._client_id,
             "client_secret": self._client_secret,
