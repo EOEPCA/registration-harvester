@@ -16,7 +16,7 @@ class WorkerSecrets:
             os.environ["IAM_CLIENT_SECRET"] if "IAM_CLIENT_SECRET" in os.environ else None
         )
 
-    def get_secret(self, key: str, default: str):
+    def get_secret(self, key: str, default: str = ""):
         if key is not None and len(key) > 0:
             return self.secrets[key]
         else:
