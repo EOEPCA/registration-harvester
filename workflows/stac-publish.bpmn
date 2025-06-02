@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:flowable="http://flowable.org/bpmn" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:design="http://flowable.org/design" typeLanguage="http://www.w3.org/2001/XMLSchema" expressionLanguage="http://www.w3.org/1999/XPath" targetNamespace="http://flowable.org/test" design:palette="flowable-work-process-palette">
   <collaboration id="Collaboration">
-    <participant id="Pool_1" name="Pool" processRef="sTACPublish"></participant>
+    <participant id="Pool_1" name="Pool" processRef="stacPublish"></participant>
   </collaboration>
-  <process id="sTACPublish" name="STAC Publish" isExecutable="true" flowable:candidateStarterGroups="flowableUser">
+  <process id="stacPublish" name="STAC Publish" isExecutable="true" flowable:candidateStarterGroups="flowableUser">
     <extensionElements>
       <design:stencilid><![CDATA[BPMNDiagram]]></design:stencilid>
       <design:creationdate><![CDATA[2025-02-13T08:48:00.120Z]]></design:creationdate>
       <design:modificationdate><![CDATA[2025-04-29T07:24:08.856Z]]></design:modificationdate>
     </extensionElements>
-    <laneSet id="laneSet_sTACPublish">
+    <laneSet id="laneSet_stacPublish">
       <lane id="Lane_2" name="Lane">
         <flowNodeRef>ExpandedSubProcess_1</flowNodeRef>
         <flowNodeRef>bpmnTask_4</flowNodeRef>

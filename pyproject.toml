@@ -50,13 +50,14 @@ allow-direct-references = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-log_cli = true
-log_cli_level = "INFO"
 addopts = "-q --import-mode=importlib --no-header -rfE --disable-warnings --log-level=INFO"
 testpaths = [
-    "test",
-    "integration",
+    "tests"
 ]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s.%(msecs)03d %(levelname)s %(message)s"
+log_cli_date_format = "%Y-%m-%dT%H:%M:%S"
 
 [tool.black]
 line-length = 120

@@ -4,6 +4,7 @@ import fsspec
 from eodm.load import load_stac_api_collections, load_stac_api_items
 from eodm.stac_contrib import FSSpecStacIO
 from pystac import Catalog, Collection, Item, StacIO
+
 from worker.common.log_utils import configure_logging, log_with_context
 from worker.common.task_handler import TaskHandler
 from worker.common.types import ExternalJob, JobResult, JobResultBuilder
@@ -38,7 +39,6 @@ class StacCatalogHandler(TaskHandler):
 
             # Set up StacIO
             if stac_catalog_source.startswith("s3://"):
-
                 # Get optional S3 variables
                 s3_endpoint_url = job.get_variable("s3_endpoint_url")
                 s3_access_key = job.get_variable("s3_access_key")
@@ -52,7 +52,6 @@ class StacCatalogHandler(TaskHandler):
                 StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
 
             else:
-
                 StacIO.set_default(FSSpecStacIO)
 
             # Read the stac catalog
@@ -115,7 +114,6 @@ class StacCollectionHandler(TaskHandler):
                 StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
 
             else:
-
                 StacIO.set_default(FSSpecStacIO)
 
             collection = Collection.from_file(stac_collection_source)
@@ -195,7 +193,6 @@ class StacItemHandler(TaskHandler):
                 StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
 
             else:
-
                 StacIO.set_default(FSSpecStacIO)
 
             item = Item.from_file(stac_item_source)
