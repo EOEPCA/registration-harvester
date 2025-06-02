@@ -6,7 +6,7 @@ import pytest
 import requests
 from pystac import Collection, Extent, SpatialExtent, TemporalExtent
 
-from worker.common.iam_client import IAMClient
+from worker.common.iam import IAMClient
 
 logger = logging.getLogger()
 

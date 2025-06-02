@@ -5,6 +5,7 @@ from eodm.load import load_stac_api_collections, load_stac_api_items
 from eodm.stac_contrib import FSSpecStacIO
 from pystac import Catalog, Collection, Item, StacIO
 
+from worker.common.iam import IAMClient
 from worker.common.log_utils import configure_logging, log_with_context
 from worker.common.task_handler import TaskHandler
 from worker.common.types import ExternalJob, JobResult, JobResultBuilder
@@ -97,6 +98,18 @@ class StacCollectionHandler(TaskHandler):
         if not auth[0] or not auth[1]:
             auth = None
 
+        # Get token to access protected endpoints of catalog
+        iam_oidc_token_endpoint_url = (
+            "https://iam-auth.apx.develop.eoepca.org/realms/eoepca/protocol/openid-connect/token"
+        )
+        iam_client_id = "registration-harvester"
+        iam_client_secret = "Uj1nOvyZ8iFdRN8Iqaik0OkXDS66INU3"
+        iam_client = IAMClient(
+            token_endpoint_url=iam_oidc_token_endpoint_url, client_id=iam_client_id, client_secret=iam_client_secret
+        )
+        token = iam_client.get_access_token()
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+
         try:
             log_with_context(f"Loading STAC collection from: {stac_collection_source}", log_context)
             # Set up StacIO
@@ -128,9 +141,10 @@ class StacCollectionHandler(TaskHandler):
             for collection_loaded in load_stac_api_collections(
                 url=url,
                 collections=[collection],
+                headers=headers,
                 verify=False,
                 update=True,
-                auth=auth,
+                auth=None,
             ):
                 url = os.path.join(url, "collections", collection_loaded.id)
                 log_with_context(f"Successfully published collection at {url}", log_context)
