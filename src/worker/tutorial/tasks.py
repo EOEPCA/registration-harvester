@@ -1,5 +1,6 @@
 # src/worker/tutorial/tasks.py
 from flowable.external_worker_client import ExternalJob, JobResult, JobResultBuilder
+from pystac_client import Client
 
 from worker.common.log_utils import log_with_context  # For logging
 from worker.common.task_handler import TaskHandler
@@ -14,12 +15,14 @@ class TutorialDiscoverItemsTaskHandler(TaskHandler):
             # no input data needed for this task
 
             # get STAC API url from configuration
-            api_url = self.get_config("service_url", "http://default.api.com")
+            api_url = self.get_config("service_url", "https://stac.dataspace.copernicus.eu/v1/")
 
             # 2. Perform task logic
             log_with_context(f"Searching STAC items using API: {api_url}", log_context)
             # stac search
-            items = []
+            catalog = Client.open(api_url, headers=[])
+            search = catalog.search(max_items=100, collections="sentinel-2-l2a", datetime="2025-07-02")
+            items = list(search.items_as_dicts())
 
             # 3. Return success with output variables
             log_with_context("DiscoverItems task completed successfully.", log_context)

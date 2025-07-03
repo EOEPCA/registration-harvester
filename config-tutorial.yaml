@@ -19,5 +19,5 @@ worker:
   # Provide configuration specific to each handler, if needed
   handlers:  
     TutorialDiscoverItemsTaskHandler:
-      service_url: "https://my.api.service.com/v1/process"
+      service_url: "https://stac.dataspace.copernicus.eu/v1/"
       default_timeout_seconds: 60
