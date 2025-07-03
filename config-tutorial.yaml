@@ -1,0 +1,23 @@
+worker:
+  log_level: INFO
+  flowable:
+    host: https://registration-harvester-api.develop.eoepca.org/flowable-rest
+    tls: true
+    cacert: ./etc/eoepca-ca-chain.pem
+  topics:
+    tutorial_discover_items:                        # Job topic name defined in the BPMN for this task
+      module: "worker.tutorial.tasks"               # Path to the .py file containing the handler implementation, dot-separated
+      handler: "TutorialDiscoverItemsTaskHandler"   # Name of the handler class
+      lock_duration: "PT5M"                         # Example: 5 minute lock duration for this task
+      number_of_retries: 3                          # If the task fails, the BPMN engine will retry 3 times
+    tutorial_process_item:
+      module: "worker.tutorial.tasks"               
+      handler: "TutorialProcessItemTaskHandler"     
+      lock_duration: "PT5M"                         
+      number_of_retries: 3                          
+
+  # Provide configuration specific to each handler, if needed
+  handlers:  
+    TutorialDiscoverItemsTaskHandler:
+      service_url: "https://my.api.service.com/v1/process"
+      default_timeout_seconds: 60
