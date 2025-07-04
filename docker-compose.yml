@@ -1,4 +1,47 @@
 services:
+    flowable-rest:
+        image: flowable/flowable-rest:7.1.0
+        container_name: flowable-rest
+        depends_on:
+            - flowable-postgres
+        environment:
+            - SERVER_PORT=8080
+            - SPRING_DATASOURCE_DRIVER-CLASS-NAME=org.postgresql.Driver
+            - SPRING_DATASOURCE_URL=jdbc:postgresql://flowable-postgres:5432/flowable
+            - SPRING_DATASOURCE_USERNAME=flowable
+            - SPRING_DATASOURCE_PASSWORD=flowable
+            - FLOWABLE_REST_APP_ADMIN_USER-ID=eoepca
+            - FLOWABLE_REST_APP_ADMIN_PASSWORD=eoepca
+            - FLOWABLE_COMMON_APP_IDM-ADMIN_USER=admin
+            - FLOWABLE_COMMON_APP_IDM-ADMIN_PASSWORD=test
+            - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB=INFO
+            - LOGGING_LEVEL_ORG_FLOWABLE=INFO
+            - LOGGING_LEVEL_ORG_FLOWABLE_JOB_SERVICE=INFO
+            - FLOWABLE_REST_APP_AUTHENTICATION-MODE=any-user
+            - FLOWABLE_REST_APP_CREATE-DEMO-DEFINITIONS=false
+            - FLOWABLE_REST_APP_CORS_ENABLED=true
+            - FLOWABLE_REST_APP_CORS_ALLOWED-ORIGINS=*
+        ports:
+            - 8082:8080
+        entrypoint: ["./wait-for-something.sh", "flowable-postgres", "5432", "PostgreSQL", "/flowable-entrypoint.sh"]
+        networks:
+            - flowable-network
+        restart: always
+
+    flowable-postgres:
+        image: postgres:13
+        container_name: flowable-postgres
+        environment:
+            - POSTGRES_PASSWORD=flowable
+            - POSTGRES_USER=flowable
+            - POSTGRES_DB=flowable
+        ports:
+            - 5434:5432
+        command: postgres
+        networks:
+            - flowable-network
+        restart: always
+
     harvester-worker-landsat:
         image: eoepca/registration-harvester:latest
         container_name: registration-harvester-landsat
@@ -38,8 +81,22 @@ services:
             - CONFIG_FILE_PATH=/worker/config/harvester.yaml
             - FLOWABLE_USER=${FLOWABLE_USER}
             - FLOWABLE_PASSWORD=${FLOWABLE_PASSWORD}
-            - CDSE_USER=${CDSE_USER}
-            - CDSE_PASSWORD=${CDSE_PASSWORD}
         volumes:
             - ./config-static-catalog.yaml:/worker/config/harvester.yaml:ro
         restart: always
+    harvester-worker-tutorial:
+        image: eoepca/registration-harvester:latest
+        container_name: registration-harvester-tutorial
+        ports:
+            - "8083:8080"
+        environment:
+            - CONFIG_FILE_PATH=/worker/config/harvester.yaml
+            - FLOWABLE_USER=${FLOWABLE_USER}
+            - FLOWABLE_PASSWORD=${FLOWABLE_PASSWORD}
+        volumes:
+            - ./config-tutorial.yaml:/worker/config/harvester.yaml:ro
+        restart: always                
+
+networks:
+  flowable-network:
+    driver: bridge
