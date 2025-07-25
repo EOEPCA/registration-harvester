@@ -150,7 +150,7 @@ class StacCollectionHandler(TaskHandler):
                 headers=headers,
                 verify=False,
                 update=stac_update_collections,
-                auth=auth,
+                auth=None,
             ):
                 url = os.path.join(url, "collections", collection_loaded.id)
                 log_with_context(f"Successfully published collection at {url}", log_context)
@@ -241,7 +241,7 @@ class StacItemHandler(TaskHandler):
                 headers=headers,
                 verify=False,
                 update=stac_update_items,
-                auth=auth,
+                auth=None,
             ):
                 url = os.path.join(url, "collections", item_loaded.collection_id, "items", item_loaded.id)
                 log_with_context(f"Successfully published item at {url}", log_context)
