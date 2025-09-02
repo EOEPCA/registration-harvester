@@ -1,9 +1,9 @@
 import os
 
 import fsspec
-from httpx import HTTPStatusError
 from eodm.load import load_stac_api_collections, load_stac_api_items
 from eodm.stac_contrib import FSSpecStacIO
+from httpx import HTTPStatusError
 from pystac import Catalog, Collection, Item, StacIO
 
 from worker.common.iam import IAMClient
@@ -98,11 +98,13 @@ class StacCollectionHandler(TaskHandler):
         stac_collection_source = job.get_variable("stac_collection_source")
         if not stac_collection_source:
             raise ValueError("Missing required variable: stac_collection_source")
-        stac_update_collections_str = job.get_variable("stac_update_collections")
-        if isinstance(stac_update_collections_str, str):
-            stac_update_collections = stac_update_collections_str.lower() == "true"
-        else:
-            stac_update_collections = True
+        stac_update_collections = True
+        stac_update_collections_param = job.get_variable("stac_update_collections")
+        if stac_update_collections_param is not None:
+            if isinstance(stac_update_collections_param, str):
+                stac_update_collections = stac_update_collections_param.lower() == "true"
+            else:
+                stac_update_collections = stac_update_collections_param
 
         # Get and validate required configuration values
         url = self.get_config("stac_api_url", "")
@@ -156,14 +158,16 @@ class StacCollectionHandler(TaskHandler):
                 log_with_context(f"Successfully published collection at {url}", log_context)
         except HTTPStatusError as e:
             if e.response.status_code == 409:
-                log_with_context(f"Collection {collection.id} already exists. To update this resource set process variable stac_update_collections True")
+                log_with_context(
+                    f"Collection {collection.id} already exists. To update this resource set process variable stac_update_collections to true"
+                )
         except Exception as e:
             log_with_context(f"Error publishing collection: {str(e)}", log_context)
             return result.failure()
 
         stac_item_source = [item.get_self_href() for item in collection.get_all_items()]
         log_with_context(
-            f"Published collection {collection.id}. " f"Starting {len(stac_item_source)} StacItemHandler tasks.",
+            f"Published collection {collection.id}. Starting {len(stac_item_source)} StacItemHandler tasks.",
             log_context,
         )
         return result.success().variable_json(name="stac_item_source", value=stac_item_source)
@@ -189,11 +193,13 @@ class StacItemHandler(TaskHandler):
         stac_item_source = job.get_variable("stac_item_source")
         if not stac_item_source:
             raise ValueError("Missing required variable: stac_item_source")
-        stac_update_items_str = job.get_variable("stac_update_items")
-        if isinstance(stac_update_items_str, str):
-            stac_update_items = stac_update_items_str.lower() == "true"
-        else:
-            stac_update_items = True
+        stac_update_items = True
+        stac_update_items_param = job.get_variable("stac_update_items")
+        if stac_update_items_param is not None:
+            if isinstance(stac_update_items_param, str):
+                stac_update_items = stac_update_items_param.lower() == "true"
+            else:
+                stac_update_items = stac_update_items_param
 
         # Get and validate required configuration values
         url = self.get_config("stac_api_url", "")
@@ -248,7 +254,9 @@ class StacItemHandler(TaskHandler):
 
         except HTTPStatusError as e:
             if e.response.status_code == 409:
-                log_with_context(f"Item {item.id} already exists. To update this resource set process variable stac_update_items True")
+                log_with_context(
+                    f"Item {item.id} already exists. To update this resource set process variable stac_update_items to true"
+                )
         except Exception as e:
             log_with_context(f"Error publishing item: {str(e)}", log_context)
             return result.failure()

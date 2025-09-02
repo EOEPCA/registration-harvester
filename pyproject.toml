@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "worker"
-version = "1.1.0"
+version = "1.2.0"
 authors = [
     { name="Mario Winkler", email="mario.winkler@dlr.de" },
     { name="Jonas Eberle", email="jonas.eberle@dlr.de" },
@@ -28,7 +28,7 @@ dependencies = [
     "fsspec",
     "s3fs",
     "registration-library @ git+https://github.com/EOEPCA/registration-library",
-    "flowable.external-worker-client @ git+https://github.com/EOEPCA/eoepca-flowable-external-client-python",
+    "flowable.external-worker-client @ git+https://github.com/EOEPCA/eoepca-flowable-external-client-python@1.2.0",
     "eodm @ git+https://github.com/geopython/eodm"
 ]
 
