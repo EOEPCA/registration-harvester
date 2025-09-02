@@ -159,7 +159,8 @@ class StacCollectionHandler(TaskHandler):
         except HTTPStatusError as e:
             if e.response.status_code == 409:
                 log_with_context(
-                    f"Collection {collection.id} already exists. To update this resource set process variable stac_update_collections to true"
+                    f"Collection {collection.id} already exists. "
+                    + "To update this resource set process variable stac_update_collections to true"
                 )
         except Exception as e:
             log_with_context(f"Error publishing collection: {str(e)}", log_context)
@@ -255,7 +256,8 @@ class StacItemHandler(TaskHandler):
         except HTTPStatusError as e:
             if e.response.status_code == 409:
                 log_with_context(
-                    f"Item {item.id} already exists. To update this resource set process variable stac_update_items to true"
+                    f"Item {item.id} already exists. "
+                    + "To update this resource set process variable stac_update_items to true"
                 )
         except Exception as e:
             log_with_context(f"Error publishing item: {str(e)}", log_context)
