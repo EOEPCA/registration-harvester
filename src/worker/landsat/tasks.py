@@ -223,7 +223,7 @@ class LandsatDownloadHandler(TaskHandler):
 
         base_dir = self.get_config("download_base_dir", "/tmp")
         download_timeout = self.get_config("download_timeout", 300)
-        temp_dir = usgs.get_scene_id_folder(scene["id"])
+        temp_dir = landsat.get_scene_id_folder(scene["id"])
         download_dir = os.path.join(base_dir, temp_dir)
         file_path = os.path.join(download_dir, f"{scene["id"]}.tar")
 
