@@ -352,7 +352,10 @@ class LandsatRegisterMetadataHandler(TaskHandler):
         if rewrite_asset_hrefs is not None:
             if "prefix_from" in rewrite_asset_hrefs and "prefix_to" in rewrite_asset_hrefs:
                 log_with_context(
-                    f"Rewriting asset hrefs with prefix {rewrite_asset_hrefs['prefix_from']} -> {rewrite_asset_hrefs['prefix_to']}",
+                    (
+                        "Rewriting asset hrefs with prefix "
+                        f"{rewrite_asset_hrefs['prefix_from']} -> {rewrite_asset_hrefs['prefix_to']}"
+                    ),
                     log_context,
                 )
             else:
