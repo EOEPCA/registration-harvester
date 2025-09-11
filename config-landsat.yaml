@@ -52,3 +52,6 @@ worker:
     LandsatRegisterMetadataHandler:
       stac_api_url: https://resource-catalogue.develop.eoepca.org/stac/
       stac_file_deletion: true
+      rewrite_asset_hrefs:
+        prefix_from: ""
+        prefix_to: "file://"

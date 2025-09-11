@@ -345,6 +345,24 @@ class LandsatRegisterMetadataHandler(TaskHandler):
         api_ca_cert = self.get_config("stac_api_ca_cert", None)
         file_deletion = self.get_config("stac_file_deletion", True)
 
+        # Asset href rewriting
+        # - By default - preserve existing behaviour - i.e. prefix 'file://'
+        rewrite_asset_hrefs_default = {"prefix_from": "", "prefix_to": "file://"}
+        rewrite_asset_hrefs = self.get_config("rewrite_asset_hrefs", rewrite_asset_hrefs_default)
+        if rewrite_asset_hrefs is not None:
+            if "prefix_from" in rewrite_asset_hrefs and "prefix_to" in rewrite_asset_hrefs:
+                log_with_context(
+                    f"Rewriting asset hrefs with prefix {rewrite_asset_hrefs['prefix_from']} -> {rewrite_asset_hrefs['prefix_to']}",
+                    log_context,
+                )
+            else:
+                rewrite_asset_hrefs = None
+                log_with_context(
+                    "Incomplete configuration for asset hrefs rewriting, skipping ...", log_context, "warning"
+                )
+        else:
+            log_with_context("No rewriting of asset hrefs configured", log_context)
+
         # validate input
         vars_not_set = self.validate([scene, scene_stac_file, api_url])
         if len(vars_not_set) > 0:
@@ -361,6 +379,7 @@ class LandsatRegisterMetadataHandler(TaskHandler):
                 api_pw=api_pw,
                 api_ca_cert=api_ca_cert,
                 file_deletion=file_deletion,
+                rewrite_asset_hrefs=rewrite_asset_hrefs,
             )
         except Exception as e:
             error_msg = str(e)
