@@ -4,11 +4,13 @@ from requests.auth import HTTPBasicAuth
 from worker.common.config import worker_config
 from worker.common.secrets import worker_secrets
 
+import certifi
+
 
 def customize_session(session):
     flowable_config = worker_config.get("flowable")
     if flowable_config.get("tls", False) and session is not None:
-        session.verify = flowable_config.get("cacert", "")
+        session.verify = flowable_config.get("cacert", certifi.where())
         return session
     else:
         return None

@@ -83,6 +83,24 @@ def add_asset_filesize(stac):
     return stac
 
 
+def asset_hrefs_rewrite(stac_item, prefix_from, prefix_to):
+    """
+    Rewrite asset hrefs in a STAC item by replacing a given prefix with a new prefix.
+
+    Arguments:
+        stac_item: pystac.Item object whose asset hrefs will be updated
+        prefix_from: The prefix string to search for in asset hrefs (e.g., '/eodata/')
+        prefix_to: The prefix string to replace with (e.g., 'https://eodata.myplatform.domain/')
+
+    Returns:
+        The updated pystac.Item object
+    """
+    for asset in stac_item.assets.values():
+        if asset.href.startswith(prefix_from):
+            asset.href = asset.href.replace(prefix_from, prefix_to, 1)
+    return stac_item
+
+
 def register_metadata(
     stac_file,
     collection,
@@ -91,6 +109,7 @@ def register_metadata(
     api_pw,
     api_ca_cert,
     file_deletion=False,
+    rewrite_asset_hrefs=None,
 ):
     stac_files = stac_file.split(";")
     for stac_file in stac_files:
@@ -101,8 +120,10 @@ def register_metadata(
         stac = pystac.read_file(stac_file)
         stac.remove_links("self")
 
-        for _, asset in stac.assets.items():
-            asset.href = f"file://{asset.href}"
+        if rewrite_asset_hrefs is not None:
+            if "prefix_from" in rewrite_asset_hrefs and "prefix_to" in rewrite_asset_hrefs:
+                stac = asset_hrefs_rewrite(stac, rewrite_asset_hrefs["prefix_from"], rewrite_asset_hrefs["prefix_to"])
+
         # stac = stac.make_asset_hrefs_absolute()
 
         # Check STAC collection id
