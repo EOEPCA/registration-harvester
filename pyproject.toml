@@ -29,7 +29,10 @@ dependencies = [
     "s3fs",
     "registration-library @ git+https://github.com/EOEPCA/registration-library",
     "flowable.external-worker-client @ git+https://github.com/EOEPCA/eoepca-flowable-external-client-python@1.2.0",
-    "eodm @ git+https://github.com/geopython/eodm"
+    "eodm @ git+https://github.com/geopython/eodm",
+    "httpx",
+    "pystac",
+    "pystac-client"
 ]
 
 [project.optional-dependencies]

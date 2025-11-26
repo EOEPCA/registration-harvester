@@ -1,8 +1,11 @@
 import os
+from urllib.parse import urlparse, urlunparse
 
 import fsspec
 from eodm.load import load_stac_api_collections, load_stac_api_items
+from eodm.extract import extract_stac_api_collections, extract_stac_api_items
 from eodm.stac_contrib import FSSpecStacIO
+import pystac_client
 from httpx import HTTPStatusError
 from pystac import Catalog, Collection, Item, StacIO
 
@@ -28,7 +31,7 @@ class StacCatalogHandler(TaskHandler):
         Load STAC catalog and extract collection paths
 
         Variables needed:
-            stac_catalog_source: URI to the STAC catalog file (can be a local path, HTTP/HTTPS URL, or S3 URL)
+            stac_catalog_source: URI to the STAC catalog file (can be a local path, HTTP/HTTPS URL, STAC API or S3 URL)
             s3_endpoint_url: (Optional) S3 endpoint URL for custom S3 servers like Minio
             s3_access_key: (Optional) S3 access key
             s3_secret_key: (Optional) S3 secret key
@@ -47,31 +50,56 @@ class StacCatalogHandler(TaskHandler):
         try:
             log_with_context(f"Loading STAC catalog from: {stac_catalog_source}", log_context)
 
-            # Set up StacIO
-            if stac_catalog_source.startswith("s3://"):
-                # Get optional S3 variables
-                s3_endpoint_url = job.get_variable("s3_endpoint_url")
-                s3_access_key = job.get_variable("s3_access_key")
-                s3_secret_key = job.get_variable("s3_secret_key")
-                if not s3_endpoint_url or not s3_access_key or not s3_secret_key:
-                    raise ValueError("Missing required S3 variables: s3_endpoint_url, s3_access_key, s3_secret_key")
+            match stac_catalog_source:
+                # Handle STAC APIs
+                case api_value if "api" in api_value:
+                    try:
+                        StacIO.set_default(FSSpecStacIO)
+                        stac_collection_source = [collection.get_self_href() for collection in extract_stac_api_collections(stac_catalog_source)]
 
-                fs = fsspec.filesystem(
-                    "s3", client_kwargs={"endpoint_url": s3_endpoint_url}, key=s3_access_key, secret=s3_secret_key
-                )
-                StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
+                    except pystac_client.errors.ClientTypeError as e:
+                        # Handle collections
+                        parsed = urlparse(stac_catalog_source)
+                        comps = parsed.path.strip('/').split('/')
+                        stac_type = comps[-2]
 
-            else:
-                StacIO.set_default(FSSpecStacIO)
+                        if stac_type == "collections":
+                            return result.success().variable_json(name="stac_collection_source", value=[stac_catalog_source])
+                        else:
+                            raise e
 
-            # Read the stac catalog
-            catalog = Catalog.from_file(stac_catalog_source)
+                # Handle local files or file server URLs
+                case file_value if file_value.startswith("/") or (file_value.startswith("http://") or file_value.startswith("https://")):
+                    StacIO.set_default(FSSpecStacIO)
+                    catalog = Catalog.from_file(stac_catalog_source)
+                    stac_collection_source = [collection.get_self_href() for collection in catalog.get_all_collections()]
+
+                # Handle S3
+                case s3_value if s3_value.startswith("s3://"):
+                    # Get optional S3 variables
+                    s3_endpoint_url = job.get_variable("s3_endpoint_url")
+                    s3_access_key = job.get_variable("s3_access_key")
+                    s3_secret_key = job.get_variable("s3_secret_key")
+                    if not s3_endpoint_url or not s3_access_key or not s3_secret_key:
+                        raise ValueError("Missing required S3 variables: s3_endpoint_url, s3_access_key, s3_secret_key")
+
+                    fs = fsspec.filesystem(
+                        "s3", client_kwargs={"endpoint_url": s3_endpoint_url}, key=s3_access_key, secret=s3_secret_key
+                    )
+                    StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
+
+                    catalog = Catalog.from_file(stac_catalog_source)
+                    stac_collection_source = [collection.get_self_href() for collection in catalog.get_all_collections()]
+
+                # Default
+                case _:
+                    log_with_context(f"Error loading catalog: Could not handle source {stac_catalog_source}", log_context)
+                    return result.failure()
 
         except Exception as e:
             log_with_context(f"Error loading catalog: {str(e)}", log_context)
             return result.failure()
 
-        stac_collection_source = [collection.get_self_href() for collection in catalog.get_all_collections()]
         log_with_context(
             f"Loaded catalog. Starting {len(stac_collection_source)} StacCollectionHandler tasks.", log_context
         )
@@ -114,29 +142,56 @@ class StacCollectionHandler(TaskHandler):
         if not auth[0] or not auth[1]:
             auth = None
 
+        # Retrieve collection
         try:
             log_with_context(f"Loading STAC collection from: {stac_collection_source}", log_context)
-            # Set up StacIO
-            if stac_collection_source.startswith("s3://"):
-                # Get optional S3 variables
-                s3_endpoint_url = job.get_variable("s3_endpoint_url")
-                s3_access_key = job.get_variable("s3_access_key")
-                s3_secret_key = job.get_variable("s3_secret_key")
-                if not s3_endpoint_url or not s3_access_key or not s3_secret_key:
-                    raise ValueError("Missing required S3 variables: s3_endpoint_url, s3_access_key, s3_secret_key")
+            match stac_collection_source:
+                # Handle STAC APIs
+                case api_value if "api" in api_value:
+                    # StacIO.set_default(FSSpecStacIO)
 
-                fs = fsspec.filesystem(
-                    "s3", client_kwargs={"endpoint_url": s3_endpoint_url}, key=s3_access_key, secret=s3_secret_key
-                )
-                StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
+                    parsed = urlparse(stac_collection_source)
+                    comps = parsed.path.strip("/").split("/")
 
-            else:
-                StacIO.set_default(FSSpecStacIO)
+                    if len(comps) < 2:
+                        raise ValueError("Not enough path components in URL")
 
-            collection = Collection.from_file(stac_collection_source)
+                    collection_name = comps[-1]
+                    catalog_path = "/" + "/".join(comps[:-2])
+
+                    catalog_url = urlunparse(parsed._replace(path=catalog_path))
+
+                    client = pystac_client.Client.open(catalog_url)
+                    collection = client.get_collection(collection_name)
+
+                # Handle local files or file server URLs
+                case file_value if file_value.startswith("/") or (file_value.startswith("http://") or file_value.startswith("https://")):
+                    StacIO.set_default(FSSpecStacIO)
+                    collection = Collection.from_file(stac_collection_source)
+
+                # Handle S3
+                case s3_value if s3_value.startswith("s3://"):
+                    # Get optional S3 variables
+                    s3_endpoint_url = job.get_variable("s3_endpoint_url")
+                    s3_access_key = job.get_variable("s3_access_key")
+                    s3_secret_key = job.get_variable("s3_secret_key")
+                    if not s3_endpoint_url or not s3_access_key or not s3_secret_key:
+                        raise ValueError("Missing required S3 variables: s3_endpoint_url, s3_access_key, s3_secret_key")
+
+                    fs = fsspec.filesystem(
+                        "s3", client_kwargs={"endpoint_url": s3_endpoint_url}, key=s3_access_key, secret=s3_secret_key
+                    )
+                    StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
+
+                    collection = Collection.from_file(stac_collection_source)
+
+                # Default
+                case _:
+                    log_with_context(f"Error loading collection: Could not handle source {stac_collection_source}", log_context)
+                    return result.failure()
 
         except Exception as e:
-            log_with_context(f"Error loading collection: {str(e)}", log_context)
+            log_with_context(f"Error loading catalog: {str(e)}", log_context)
             return result.failure()
 
         # Get token to access protected endpoints of catalog
@@ -165,6 +220,8 @@ class StacCollectionHandler(TaskHandler):
         except Exception as e:
             log_with_context(f"Error publishing collection: {str(e)}", log_context)
             return result.failure()
+
+        # log_with_context(f"Collection items: {[item for item in collection.get_items(recursive= True)]}", log_context)
 
         stac_item_source = [item.get_self_href() for item in collection.get_all_items()]
         log_with_context(
@@ -210,26 +267,52 @@ class StacItemHandler(TaskHandler):
         if not auth[0] or not auth[1]:
             auth = None
 
+        # Retrieve item
         try:
             log_with_context(f"Loading STAC item from: {stac_item_source}", log_context)
-            # Set up StacIO
-            if stac_item_source.startswith("s3://"):
-                # Get optional S3 variables
-                s3_endpoint_url = job.get_variable("s3_endpoint_url")
-                s3_access_key = job.get_variable("s3_access_key")
-                s3_secret_key = job.get_variable("s3_secret_key")
-                if not s3_endpoint_url or not s3_access_key or not s3_secret_key:
-                    raise ValueError("Missing required S3 variables: s3_endpoint_url, s3_access_key, s3_secret_key")
+            match stac_item_source:
+                # Handle STAC APIs
+                case api_value if "api" in api_value:
+                    parsed = urlparse(stac_item_source)
+                    comps = parsed.path.strip("/").split("/")
 
-                fs = fsspec.filesystem(
-                    "s3", client_kwargs={"endpoint_url": s3_endpoint_url}, key=s3_access_key, secret=s3_secret_key
-                )
-                StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
+                    if len(comps) < 2:
+                        raise ValueError("Not enough path components in URL")
 
-            else:
-                StacIO.set_default(FSSpecStacIO)
+                    collection_name = comps[-3]
+                    item_id = comps[-1]
+                    catalog_path = "/" + "/".join(comps[:-4])
+                    catalog_url = urlunparse(parsed._replace(path=catalog_path))
 
-            item = Item.from_file(stac_item_source)
+                    client = pystac_client.Client.open(catalog_url)
+                    search = client.search(ids=[item_id], collections=[collection_name])
+                    item = [item for item in search.items()][0]
+
+                # Handle local files or file server URLs
+                case file_value if file_value.startswith("/") or (file_value.startswith("http://") or file_value.startswith("https://")):
+                    StacIO.set_default(FSSpecStacIO)
+                    item = Item.from_file(stac_item_source)
+
+                # Handle S3
+                case s3_value if s3_value.startswith("s3://"):
+                    # Get optional S3 variables
+                    s3_endpoint_url = job.get_variable("s3_endpoint_url")
+                    s3_access_key = job.get_variable("s3_access_key")
+                    s3_secret_key = job.get_variable("s3_secret_key")
+                    if not s3_endpoint_url or not s3_access_key or not s3_secret_key:
+                        raise ValueError("Missing required S3 variables: s3_endpoint_url, s3_access_key, s3_secret_key")
+
+                    fs = fsspec.filesystem(
+                        "s3", client_kwargs={"endpoint_url": s3_endpoint_url}, key=s3_access_key, secret=s3_secret_key
+                    )
+                    StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
+
+                    item = Item.from_file(stac_item_source)
+
+                # Default
+                case _:
+                    log_with_context(f"Error loading collection: Could not handle source {stac_collection_source}", log_context)
+                    return result.failure()
 
         except Exception as e:
             log_with_context(f"Error loading item: {str(e)}", log_context)
