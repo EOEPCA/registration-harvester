@@ -6,20 +6,11 @@ from eodm.stac_contrib import FSSpecStacIO
 from httpx import HTTPStatusError
 from pystac import Catalog, Collection, Item, StacIO
 
-from worker.common.iam import IAMClient
 from worker.common.log_utils import configure_logging, log_with_context
-from worker.common.secrets import worker_secrets
 from worker.common.task_handler import TaskHandler
 from worker.common.types import ExternalJob, JobResult, JobResultBuilder
 
 configure_logging()
-
-iam_client_id = worker_secrets.get_secret("iam_client_id", None)
-iam_client_secret = worker_secrets.get_secret("iam_client_secret", None)
-iam_oidc_token_endpoint_url = "https://iam-auth.apx.develop.eoepca.org/realms/eoepca/protocol/openid-connect/token"
-iam_client = IAMClient(
-    token_endpoint_url=iam_oidc_token_endpoint_url, client_id=iam_client_id, client_secret=iam_client_secret
-)
 
 
 class StacCatalogHandler(TaskHandler):
@@ -140,7 +131,7 @@ class StacCollectionHandler(TaskHandler):
             return result.failure()
 
         # Get token to access protected endpoints of catalog
-        token = iam_client.get_access_token()
+        token = self.iam_client.get_access_token()
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
 
         # Publish stac collection
@@ -236,7 +227,7 @@ class StacItemHandler(TaskHandler):
             return result.failure()
 
         # Get token to access protected endpoints of catalog
-        token = iam_client.get_access_token()
+        token = self.iam_client.get_access_token()
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
 
         # Publish STAC item

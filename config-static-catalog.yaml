@@ -4,6 +4,8 @@ worker:
     host: https://registration-harvester-api.develop.eoepca.org/flowable-rest
     tls: true
     cacert: ./etc/eoepca-ca-chain.pem
+  iam:
+    oidc_token_endpoint_url: https://iam-auth.develop.eoepca.org/realms/eoepca/protocol/openid-connect/token
   topics:
     stac_publish_catalog:
       module: worker.stac.tasks
