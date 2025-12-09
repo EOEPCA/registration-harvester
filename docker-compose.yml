@@ -43,7 +43,7 @@ services:
         restart: always
 
     harvester-worker-landsat:
-        image: eoepca/registration-harvester:latest
+        image: eoepca/registration-harvester:main
         container_name: registration-harvester-landsat
         ports:
             - "8081:8080"
@@ -53,12 +53,15 @@ services:
             - FLOWABLE_PASSWORD=${FLOWABLE_PASSWORD}
             - M2M_USER=${M2M_USER}
             - M2M_PASSWORD=${M2M_PASSWORD}
+            - IAM_CLIENT_ID=${IAM_CLIENT_ID}
+            - IAM_CLIENT_SECRET=${IAM_CLIENT_SECRET}
         volumes:
             - ./config-landsat.yaml:/worker/config/harvester.yaml:ro
             - /eodata:/eodata:rw            
         restart: always
+
     harvester-worker-sentinel:
-        image: eoepca/registration-harvester:latest
+        image: eoepca/registration-harvester:main
         container_name: registration-harvester-sentinel
         ports:
             - "8082:8080"
@@ -68,24 +71,30 @@ services:
             - FLOWABLE_PASSWORD=${FLOWABLE_PASSWORD}
             - CDSE_USER=${CDSE_USER}
             - CDSE_PASSWORD=${CDSE_PASSWORD}
+            - IAM_CLIENT_ID=${IAM_CLIENT_ID}
+            - IAM_CLIENT_SECRET=${IAM_CLIENT_SECRET}
         volumes:
             - ./config-sentinel.yaml:/worker/config/harvester.yaml:ro
             - /eodata:/eodata:rw
         restart: always
-    harvester-worker-static-catalog:
-        image: eoepca/registration-harvester:latest
-        container_name: registration-harvester-static-catalog
+    
+    harvester-worker-stac:
+        image: eoepca/registration-harvester:main
+        container_name: registration-harvester-stac
         ports:
             - "8083:8080"
         environment:
             - CONFIG_FILE_PATH=/worker/config/harvester.yaml
             - FLOWABLE_USER=${FLOWABLE_USER}
             - FLOWABLE_PASSWORD=${FLOWABLE_PASSWORD}
+            - IAM_CLIENT_ID=${IAM_CLIENT_ID}
+            - IAM_CLIENT_SECRET=${IAM_CLIENT_SECRET}
         volumes:
             - ./config-static-catalog.yaml:/worker/config/harvester.yaml:ro
         restart: always
+
     harvester-worker-tutorial:
-        image: eoepca/registration-harvester:latest
+        image: eoepca/registration-harvester:main
         container_name: registration-harvester-tutorial
         ports:
             - "8083:8080"
