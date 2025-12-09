@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "worker"
-version = "1.2.0"
+version = "1.3.0"
 authors = [
     { name="Mario Winkler", email="mario.winkler@dlr.de" },
     { name="Jonas Eberle", email="jonas.eberle@dlr.de" },
@@ -20,28 +20,29 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "requests",
-    "fastapi[standard]",
-    "stactools-landsat",
-    "setuptools",
-    "blake3",
-    "fsspec",
-    "s3fs",
+    "click == 8.2.1",
+    "requests == 2.32.5",
+    "fastapi[standard] == 0.115.14",
+    "stactools-landsat == 0.5.0",
+    "setuptools == 80.9.0",
+    "blake3 == 1.0.8",
+    "fsspec == 2024.12.0",
+    "s3fs == 2024.12.0",
     "registration-library @ git+https://github.com/EOEPCA/registration-library",
     "flowable.external-worker-client @ git+https://github.com/EOEPCA/eoepca-flowable-external-client-python@1.2.0",
-    "eodm @ git+https://github.com/geopython/eodm",
-    "httpx",
-    "pystac",
-    "pystac-client"
+    "eodm @ git+https://github.com/geopython/eodm@0.2.0",
+    "httpx == 0.27.2",
+    "pystac == 1.14.1",
+    "pystac-client == 0.7.7"
 ]
 
 [project.optional-dependencies]
 dev = [
-    "black",
-    "flake8"
+    "black == 25.12.0",
+    "flake8 == 7.3.0"
 ]
 test = [
-    "pytest"
+    "pytest == 9.0.2"
 ]
 
 [project.urls]

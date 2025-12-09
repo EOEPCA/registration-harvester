@@ -2,10 +2,10 @@ import os
 from urllib.parse import urlparse, urlunparse
 
 import fsspec
-from eodm.load import load_stac_api_collections, load_stac_api_items
-from eodm.extract import extract_stac_api_collections, extract_stac_api_items
-from eodm.stac_contrib import FSSpecStacIO
 import pystac_client
+from eodm.extract import extract_stac_api_collections
+from eodm.load import load_stac_api_collections, load_stac_api_items
+from eodm.stac_contrib import FSSpecStacIO
 from httpx import HTTPStatusError
 from pystac import Catalog, Collection, Item, StacIO
 
@@ -55,24 +55,33 @@ class StacCatalogHandler(TaskHandler):
                 case api_value if "api" in api_value:
                     try:
                         StacIO.set_default(FSSpecStacIO)
-                        stac_collection_source = [collection.get_self_href() for collection in extract_stac_api_collections(stac_catalog_source)]
+                        stac_collection_source = [
+                            collection.get_self_href()
+                            for collection in extract_stac_api_collections(stac_catalog_source)
+                        ]
 
                     except pystac_client.errors.ClientTypeError as e:
                         # Handle collections
                         parsed = urlparse(stac_catalog_source)
-                        comps = parsed.path.strip('/').split('/')
+                        comps = parsed.path.strip("/").split("/")
                         stac_type = comps[-2]
 
                         if stac_type == "collections":
-                            return result.success().variable_json(name="stac_collection_source", value=[stac_catalog_source])
+                            return result.success().variable_json(
+                                name="stac_collection_source", value=[stac_catalog_source]
+                            )
                         else:
                             raise e
 
                 # Handle local files or file server URLs
-                case file_value if file_value.startswith("/") or (file_value.startswith("http://") or file_value.startswith("https://")):
+                case file_value if file_value.startswith("/") or (
+                    file_value.startswith("http://") or file_value.startswith("https://")
+                ):
                     StacIO.set_default(FSSpecStacIO)
                     catalog = Catalog.from_file(stac_catalog_source)
-                    stac_collection_source = [collection.get_self_href() for collection in catalog.get_all_collections()]
+                    stac_collection_source = [
+                        collection.get_self_href() for collection in catalog.get_all_collections()
+                    ]
 
                 # Handle S3
                 case s3_value if s3_value.startswith("s3://"):
@@ -89,11 +98,15 @@ class StacCatalogHandler(TaskHandler):
                     StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
 
                     catalog = Catalog.from_file(stac_catalog_source)
-                    stac_collection_source = [collection.get_self_href() for collection in catalog.get_all_collections()]
+                    stac_collection_source = [
+                        collection.get_self_href() for collection in catalog.get_all_collections()
+                    ]
 
                 # Default
                 case _:
-                    log_with_context(f"Error loading catalog: Could not handle source {stac_catalog_source}", log_context)
+                    log_with_context(
+                        f"Error loading catalog: Could not handle source {stac_catalog_source}", log_context
+                    )
                     return result.failure()
 
         except Exception as e:
@@ -165,7 +178,9 @@ class StacCollectionHandler(TaskHandler):
                     collection = client.get_collection(collection_name)
 
                 # Handle local files or file server URLs
-                case file_value if file_value.startswith("/") or (file_value.startswith("http://") or file_value.startswith("https://")):
+                case file_value if file_value.startswith("/") or (
+                    file_value.startswith("http://") or file_value.startswith("https://")
+                ):
                     StacIO.set_default(FSSpecStacIO)
                     collection = Collection.from_file(stac_collection_source)
 
@@ -187,7 +202,9 @@ class StacCollectionHandler(TaskHandler):
 
                 # Default
                 case _:
-                    log_with_context(f"Error loading collection: Could not handle source {stac_collection_source}", log_context)
+                    log_with_context(
+                        f"Error loading collection: Could not handle source {stac_collection_source}", log_context
+                    )
                     return result.failure()
 
         except Exception as e:
@@ -289,7 +306,9 @@ class StacItemHandler(TaskHandler):
                     item = [item for item in search.items()][0]
 
                 # Handle local files or file server URLs
-                case file_value if file_value.startswith("/") or (file_value.startswith("http://") or file_value.startswith("https://")):
+                case file_value if file_value.startswith("/") or (
+                    file_value.startswith("http://") or file_value.startswith("https://")
+                ):
                     StacIO.set_default(FSSpecStacIO)
                     item = Item.from_file(stac_item_source)
 
@@ -311,7 +330,9 @@ class StacItemHandler(TaskHandler):
 
                 # Default
                 case _:
-                    log_with_context(f"Error loading collection: Could not handle source {stac_collection_source}", log_context)
+                    log_with_context(
+                        f"Error loading collection: Could not handle source {stac_item_source}", log_context
+                    )
                     return result.failure()
 
         except Exception as e:
