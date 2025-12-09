@@ -43,7 +43,7 @@ services:
         restart: always
 
     harvester-worker-landsat:
-        image: eoepca/registration-harvester:main
+        image: eoepca/registration-harvester:latest
         container_name: registration-harvester-landsat
         ports:
             - "8081:8080"
@@ -61,7 +61,7 @@ services:
         restart: always
 
     harvester-worker-sentinel:
-        image: eoepca/registration-harvester:main
+        image: eoepca/registration-harvester:latest
         container_name: registration-harvester-sentinel
         ports:
             - "8082:8080"
@@ -79,7 +79,7 @@ services:
         restart: always
     
     harvester-worker-stac:
-        image: eoepca/registration-harvester:main
+        image: eoepca/registration-harvester:latest
         container_name: registration-harvester-stac
         ports:
             - "8083:8080"
@@ -94,7 +94,7 @@ services:
         restart: always
 
     harvester-worker-tutorial:
-        image: eoepca/registration-harvester:main
+        image: eoepca/registration-harvester:latest
         container_name: registration-harvester-tutorial
         ports:
             - "8083:8080"
