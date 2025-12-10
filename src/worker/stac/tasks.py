@@ -51,9 +51,10 @@ class StacCatalogHandler(TaskHandler):
             log_with_context(f"Loading STAC catalog from: {stac_catalog_source}", log_context)
 
             match stac_catalog_source:
-                # Handle STAC APIs
-                case api_value if "api" in api_value:
+                # HTTP/HTTPS URLs - try STAC API first, fall back to plain HTTP/HTTPS
+                case url_value if url_value.startswith(("http://", "https://")):
                     try:
+                        # Handle STAC APIs
                         StacIO.set_default(FSSpecStacIO)
                         stac_collection_source = [
                             collection.get_self_href()
@@ -72,11 +73,15 @@ class StacCatalogHandler(TaskHandler):
                             )
                         else:
                             raise e
+                    except Exception as e:
+                        StacIO.set_default(FSSpecStacIO)
+                        catalog = Catalog.from_file(stac_catalog_source)
+                        stac_collection_source = [
+                            collection.get_self_href() for collection in catalog.get_all_collections()
+                        ]
 
-                # Handle local files or file server URLs
-                case file_value if file_value.startswith("/") or (
-                    file_value.startswith("http://") or file_value.startswith("https://")
-                ):
+                # Handle local files paths (or any other non‑URL string)
+                case file_value if file_value.startswith("/"):
                     StacIO.set_default(FSSpecStacIO)
                     catalog = Catalog.from_file(stac_catalog_source)
                     stac_collection_source = [
@@ -159,28 +164,29 @@ class StacCollectionHandler(TaskHandler):
         try:
             log_with_context(f"Loading STAC collection from: {stac_collection_source}", log_context)
             match stac_collection_source:
-                # Handle STAC APIs
-                case api_value if "api" in api_value:
-                    # StacIO.set_default(FSSpecStacIO)
+                # HTTP/HTTPS URLs - try STAC API first, fall back to plain HTTP/HTTPS
+                case url_value if url_value.startswith(("http://", "https://")):
+                    try:
+                        parsed = urlparse(stac_collection_source)
+                        comps = parsed.path.strip("/").split("/")
 
-                    parsed = urlparse(stac_collection_source)
-                    comps = parsed.path.strip("/").split("/")
+                        if len(comps) < 2:
+                            raise ValueError("Not enough path components in URL")
 
-                    if len(comps) < 2:
-                        raise ValueError("Not enough path components in URL")
+                        collection_name = comps[-1]
+                        catalog_path = "/" + "/".join(comps[:-2])
 
-                    collection_name = comps[-1]
-                    catalog_path = "/" + "/".join(comps[:-2])
+                        catalog_url = urlunparse(parsed._replace(path=catalog_path))
 
-                    catalog_url = urlunparse(parsed._replace(path=catalog_path))
+                        client = pystac_client.Client.open(catalog_url)
+                        collection = client.get_collection(collection_name)
 
-                    client = pystac_client.Client.open(catalog_url)
-                    collection = client.get_collection(collection_name)
+                    except Exception as e:
+                        StacIO.set_default(FSSpecStacIO)
+                        collection = Collection.from_file(stac_collection_source)
 
-                # Handle local files or file server URLs
-                case file_value if file_value.startswith("/") or (
-                    file_value.startswith("http://") or file_value.startswith("https://")
-                ):
+                # Handle local files paths (or any other non‑URL string)
+                case file_value if file_value.startswith("/"):
                     StacIO.set_default(FSSpecStacIO)
                     collection = Collection.from_file(stac_collection_source)
 
@@ -288,27 +294,29 @@ class StacItemHandler(TaskHandler):
         try:
             log_with_context(f"Loading STAC item from: {stac_item_source}", log_context)
             match stac_item_source:
-                # Handle STAC APIs
-                case api_value if "api" in api_value:
-                    parsed = urlparse(stac_item_source)
-                    comps = parsed.path.strip("/").split("/")
+                # HTTP/HTTPS URLs - try STAC API first, fall back to plain HTTP/HTTPS
+                case url_value if url_value.startswith(("http://", "https://")):
+                    try:
+                        parsed = urlparse(stac_item_source)
+                        comps = parsed.path.strip("/").split("/")
 
-                    if len(comps) < 2:
-                        raise ValueError("Not enough path components in URL")
+                        if len(comps) < 2:
+                            raise ValueError("Not enough path components in URL")
 
-                    collection_name = comps[-3]
-                    item_id = comps[-1]
-                    catalog_path = "/" + "/".join(comps[:-4])
-                    catalog_url = urlunparse(parsed._replace(path=catalog_path))
+                        collection_name = comps[-3]
+                        item_id = comps[-1]
+                        catalog_path = "/" + "/".join(comps[:-4])
+                        catalog_url = urlunparse(parsed._replace(path=catalog_path))
 
-                    client = pystac_client.Client.open(catalog_url)
-                    search = client.search(ids=[item_id], collections=[collection_name])
-                    item = [item for item in search.items()][0]
+                        client = pystac_client.Client.open(catalog_url)
+                        search = client.search(ids=[item_id], collections=[collection_name])
+                        item = [item for item in search.items()][0]
+                    except Exception as e:
+                        StacIO.set_default(FSSpecStacIO)
+                        item = Item.from_file(stac_item_source)
 
-                # Handle local files or file server URLs
-                case file_value if file_value.startswith("/") or (
-                    file_value.startswith("http://") or file_value.startswith("https://")
-                ):
+                # Handle local files paths (or any other non‑URL string)
+                case file_value if file_value.startswith("/"):
                     StacIO.set_default(FSSpecStacIO)
                     item = Item.from_file(stac_item_source)
 
