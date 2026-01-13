@@ -1,3 +1,6 @@
+from worker.common.config import worker_config
+from worker.common.iam import IAMClient
+from worker.common.secrets import worker_secrets
 from worker.common.types import ExternalJob, JobResult, JobResultBuilder
 
 
@@ -16,6 +19,20 @@ class TaskHandler:
             "number_of_tasks": 1,
             **self.config_all.get("subscription", {}),
         }
+
+        # IAM client
+        iam_client_id = worker_secrets.get_secret("iam_client_id", None)
+        iam_client_secret = worker_secrets.get_secret("iam_client_secret", None)
+        iam_oidc_token_endpoint_url = "https://iam-auth.develop.eoepca.org/realms/eoepca/protocol/openid-connect/token"
+        iam_config = worker_config.get_all().get("iam")
+        if iam_config is not None:
+            token_url = iam_config.get("oidc_token_endpoint_url")
+            if token_url is not None:
+                iam_oidc_token_endpoint_url = token_url
+
+        self.iam_client = IAMClient(
+            token_endpoint_url=iam_oidc_token_endpoint_url, client_id=iam_client_id, client_secret=iam_client_secret
+        )
 
     def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
         raise NotImplementedError
