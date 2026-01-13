@@ -38,6 +38,15 @@ class StacCatalogHandler(TaskHandler):
             log_with_context("Missing required variable: stac_catalog_source", log_context)
             return result.failure()
 
+        stac_catalog_collections = job.get_variable("stac_catalog_collections")
+        if not stac_catalog_collections:
+            log_with_context(
+                f"No collections provided. All collections from {stac_catalog_source} will be harvested", log_context
+            )
+        else:
+            if len(stac_catalog_collections) > 0:
+                collections_to_harvest = stac_catalog_collections.replace(" ", "").split(",")
+
         try:
             log_with_context(f"Loading STAC catalog from: {stac_catalog_source}", log_context)
 
@@ -47,10 +56,13 @@ class StacCatalogHandler(TaskHandler):
                     try:
                         # Handle STAC APIs
                         StacIO.set_default(FSSpecStacIO)
-                        stac_collection_source = [
-                            collection.get_self_href()
-                            for collection in extract_stac_api_collections(stac_catalog_source)
-                        ]
+                        stac_collection_source = []
+                        for collection in extract_stac_api_collections(stac_catalog_source):
+                            if collection.id in collections_to_harvest:
+                                log_with_context(f"Processing collection {collection.id}", log_context)
+                                stac_collection_source.append(collection.get_self_href())
+                            else:
+                                log_with_context(f"Ignoring collection {collection.id}", log_context)
 
                     except pystac_client.errors.ClientTypeError as e:
                         # Handle collections
@@ -64,7 +76,7 @@ class StacCatalogHandler(TaskHandler):
                             )
                         else:
                             raise e
-                    except Exception as e:
+                    except Exception:
                         StacIO.set_default(FSSpecStacIO)
                         catalog = Catalog.from_file(stac_catalog_source)
                         stac_collection_source = [
@@ -172,7 +184,7 @@ class StacCollectionHandler(TaskHandler):
                         client = pystac_client.Client.open(catalog_url)
                         collection = client.get_collection(collection_name)
 
-                    except Exception as e:
+                    except Exception:
                         StacIO.set_default(FSSpecStacIO)
                         collection = Collection.from_file(stac_collection_source)
 
@@ -302,7 +314,7 @@ class StacItemHandler(TaskHandler):
                         client = pystac_client.Client.open(catalog_url)
                         search = client.search(ids=[item_id], collections=[collection_name])
                         item = [item for item in search.items()][0]
-                    except Exception as e:
+                    except Exception:
                         StacIO.set_default(FSSpecStacIO)
                         item = Item.from_file(stac_item_source)
 
