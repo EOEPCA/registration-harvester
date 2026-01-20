@@ -274,7 +274,7 @@ class LandsatUntarHandler(TaskHandler):
             return self.task_failure("Untar failed", error_msg, result, retries=0)
 
         try:
-            (scene_path, tar_file_removed) = untar_file(tar_file, remove_tar=remove_tar, create_folder=create_folder)
+            scene_path, tar_file_removed = untar_file(tar_file, remove_tar=remove_tar, create_folder=create_folder)
         except Exception as e:
             error_msg = str(e)
             log_with_context(error_msg, log_context, "error")

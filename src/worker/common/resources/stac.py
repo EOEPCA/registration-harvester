@@ -102,11 +102,10 @@ def validate_configured_prefix_rewrite(rewrite_config, log_context=None):
         )
     else:
         rewrite_asset_hrefs = None
-        log_with_context(
-            "Incomplete configuration for asset hrefs rewriting, skipping ...", log_context, "warning"
-        )
+        log_with_context("Incomplete configuration for asset hrefs rewriting, skipping ...", log_context, "warning")
 
     return rewrite_asset_hrefs
+
 
 def asset_hrefs_rewrite(stac_item, prefix_from, prefix_to):
     """
@@ -181,7 +180,14 @@ def register_metadata(
         if r.status_code >= 300:
             raise Exception(
                 "Error: %s request of product %s not successfull. Status code: %s. Reason: %s. Response content: %s URL: %s"
-                % (api_action, stac.id, r.status_code, r.reason, r.content, f"{api_url}/collections/{stac.collection_id}/items"),
+                % (
+                    api_action,
+                    stac.id,
+                    r.status_code,
+                    r.reason,
+                    r.content,
+                    f"{api_url}/collections/{stac.collection_id}/items",
+                ),
             )
         else:
             print("%s request of product %s in collection %s successfull." % (api_action, stac.id, stac.collection_id))
