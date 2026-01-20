@@ -179,8 +179,10 @@ def register_metadata(
 
         if r.status_code >= 300:
             raise Exception(
-                ("Error: %s request of product %s not successfull. " +
-                 "Status code: %s. Reason: %s. Response content: %s URL: %s")
+                (
+                    "Error: %s request of product %s not successfull. "
+                    + "Status code: %s. Reason: %s. Response content: %s URL: %s"
+                )
                 % (
                     api_action,
                     stac.id,
