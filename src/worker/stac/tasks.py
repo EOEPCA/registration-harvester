@@ -10,6 +10,7 @@ from httpx import HTTPStatusError
 from pystac import Catalog, Collection, Item, StacIO
 
 from worker.common.log_utils import configure_logging, log_with_context
+from worker.common.search_interval import determine_search_interal
 from worker.common.task_handler import TaskHandler
 from worker.common.types import ExternalJob, JobResult, JobResultBuilder
 
@@ -163,6 +164,9 @@ class StacCollectionHandler(TaskHandler):
         if not auth[0] or not auth[1]:
             auth = None
 
+        # List of all collection items to load
+        stac_item_source = []
+
         # Retrieve collection
         try:
             log_with_context(f"Loading STAC collection from: {stac_collection_source}", log_context)
@@ -184,14 +188,41 @@ class StacCollectionHandler(TaskHandler):
                         client = pystac_client.Client.open(catalog_url)
                         collection = client.get_collection(collection_name)
 
+                        # avoid getting all items with  collection.get_all_items(), might be too much and takes to long (timeouts)
+                        # use default filter expression instead, if none is given
+                        datetime_interval = job.get_variable("datetime")
+                        param_bbox = job.get_variable("bbox")
+                        bbox = param_bbox.split(",") if param_bbox is not None and len(param_bbox) > 0 else None
+
+                        if not datetime_interval:
+                            timewindow_hours = self.get_config("timewindow_hours", 1)
+                            start_time, end_time = determine_search_interal(job, timewindow_hours)
+                            datetime_interval = f"{start_time}/{end_time}"
+
+                        log_with_context(
+                            f"Determine items to harvest from collection using filter: datetime_interval='{datetime_interval}' and bbox='{bbox}'",
+                            log_context,
+                        )
+                        client = pystac_client.Client.open(catalog_url)
+                        search = client.search(
+                            collections=[collection_name],
+                            datetime=datetime_interval,
+                            bbox=bbox,
+                            max_items=1000,
+                            sortby="+datetime",
+                        )
+                        stac_item_source = [item.get_self_href() for item in search.items()]
+
                     except Exception:
                         StacIO.set_default(FSSpecStacIO)
                         collection = Collection.from_file(stac_collection_source)
+                        stac_item_source = [item.get_self_href() for item in collection.get_all_items()]
 
                 # Handle local files paths (or any other non‑URL string)
                 case file_value if file_value.startswith("/"):
                     StacIO.set_default(FSSpecStacIO)
                     collection = Collection.from_file(stac_collection_source)
+                    stac_item_source = [item.get_self_href() for item in collection.get_all_items()]
 
                 # Handle S3
                 case s3_value if s3_value.startswith("s3://"):
@@ -208,6 +239,7 @@ class StacCollectionHandler(TaskHandler):
                     StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
 
                     collection = Collection.from_file(stac_collection_source)
+                    stac_item_source = [item.get_self_href() for item in collection.get_all_items()]
 
                 # Default
                 case _:
@@ -247,9 +279,6 @@ class StacCollectionHandler(TaskHandler):
             log_with_context(f"Error publishing collection: {str(e)}", log_context)
             return result.failure()
 
-        # log_with_context(f"Collection items: {[item for item in collection.get_items(recursive= True)]}", log_context)
-
-        stac_item_source = [item.get_self_href() for item in collection.get_all_items()]
         log_with_context(
             f"Published collection {collection.id}. Starting {len(stac_item_source)} StacItemHandler tasks.",
             log_context,

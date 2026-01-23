@@ -1,15 +1,12 @@
-import datetime
 import json
 import os
 
-from dateutil.parser import parse
-
 from worker.common.base.file import untar_file
-from worker.common.client import flowable_client
 from worker.common.datasets import landsat
 from worker.common.log_utils import configure_logging, log_with_context
 from worker.common.providers import usgs
 from worker.common.resources import stac
+from worker.common.search_interval import determine_search_interal
 from worker.common.secrets import worker_secrets
 from worker.common.task_handler import TaskHandler
 from worker.common.types import ExternalJob, JobResult, JobResultBuilder
@@ -77,7 +74,7 @@ class LandsatDiscoverHandler(TaskHandler):
             log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
             for idx, item in enumerate(scenes, 1):
                 # log_with_context(json.dumps(item))
-                log_with_context(f"{idx} {api_url}/collections/{item["collection"]}/items/{item["id"]}", log_context)
+                log_with_context(f"{idx} {api_url}/collections/{item['collection']}/items/{item['id']}", log_context)
 
         except Exception as e:
             error_msg = repr(e)
@@ -120,7 +117,7 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
             # Create query for time window
             timewindow_hours = self.get_config("timewindow_hours", 1)
             datetime_property = self.get_config("datetime_property", "created")
-            start_time, end_time = self.determine_search_interal(job, timewindow_hours)
+            start_time, end_time = determine_search_interal(job, timewindow_hours)
             query = json.loads(json.dumps({datetime_property: {"gte": start_time, "lt": end_time}}))
 
             log_with_context(f"Search parameter: collections={collections}", log_context)
@@ -132,7 +129,7 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
                 log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
                 for idx, item in enumerate(scenes, 1):
                     log_with_context(
-                        f"{idx} {api_url}/collections/{item["collection"]}/items/{item["id"]}", log_context
+                        f"{idx} {api_url}/collections/{item['collection']}/items/{item['id']}", log_context
                     )
 
             except Exception as e:
@@ -145,18 +142,6 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
             scenes = []
 
         return result.success().variable_json(name="scenes", value=scenes)
-
-    def determine_search_interal(self, job: ExternalJob, timedelta_hours: float) -> tuple[str, str]:
-        history = flowable_client.get_process_instance_history(job.process_instance_id)
-        if "startTime" in history:
-            current_time = parse(history["startTime"])
-        else:
-            current_time = datetime.datetime.now()
-        end_time = datetime.datetime(current_time.year, current_time.month, current_time.day, current_time.hour)
-        start_time = end_time - datetime.timedelta(hours=timedelta_hours)
-        start_time = start_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        end_time = end_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        return start_time, end_time
 
 
 class LandsatGetDownloadUrlHandler(TaskHandler):
@@ -190,7 +175,7 @@ class LandsatGetDownloadUrlHandler(TaskHandler):
             return self.task_failure("Error getting download urls", error_msg, result, retries=3, timeout="PT20M")
 
         for idx, scene in enumerate(scenes, 1):
-            log_with_context(f"{idx} id={scene["id"]} collection={scene["collection"]} url={scene["url"]}", log_context)
+            log_with_context(f"{idx} id={scene['id']} collection={scene['collection']} url={scene['url']}", log_context)
             # log_with_context(json.dumps(scene))
 
         return result.success().variable_json(name="scenes", value=scenes)
@@ -225,7 +210,7 @@ class LandsatDownloadHandler(TaskHandler):
         download_timeout = self.get_config("download_timeout", 300)
         temp_dir = landsat.get_scene_id_folder(scene["id"])
         download_dir = os.path.join(base_dir, temp_dir)
-        file_path = os.path.join(download_dir, f"{scene["id"]}.tar")
+        file_path = os.path.join(download_dir, f"{scene['id']}.tar")
 
         if os.path.exists(file_path):
             log_with_context(f"Skipped download. File {file_path} already exists", log_context)
@@ -336,7 +321,7 @@ class LandsatRegisterMetadataHandler(TaskHandler):
         log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
         scene = job.get_variable("scene")
         scene_stac_file = job.get_variable("scene_stac_file")
-        log_with_context(f"Register metadata for item {scene["id"]} and stac file {scene_stac_file} ...", log_context)
+        log_with_context(f"Register metadata for item {scene['id']} and stac file {scene_stac_file} ...", log_context)
         # log_with_context(json.dumps(scene))
 
         api_url = self.get_config("stac_api_url", "")

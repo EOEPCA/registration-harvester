@@ -29,6 +29,7 @@ worker:
         number_of_retries: 5
         wait_period_seconds: 1
         number_of_tasks: 1
+      timewindow_hours: 1
       stac_api_url: https://eoapi.develop.eoepca.org/stac/
       stac_api_ca_cert: ""
       stac_api_user: ""

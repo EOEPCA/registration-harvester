@@ -1,15 +1,11 @@
-import datetime
 import os
 import time
 import zipfile
 from pathlib import Path
 
 import requests
-from dateutil.parser import parse
 
 # from registration_library.resources import stac
-from worker.common.client import flowable_client
-
 # from registration_library.datasets import sentinel
 from worker.common.datasets import sentinel
 from worker.common.log_utils import configure_logging, format_duration, format_file_metrics, log_with_context
@@ -17,6 +13,7 @@ from worker.common.log_utils import configure_logging, format_duration, format_f
 # from registration_library.providers import esa_cdse as cdse
 from worker.common.providers import cdse
 from worker.common.resources import stac
+from worker.common.search_interval import determine_search_interal
 from worker.common.secrets import worker_secrets
 from worker.common.task_handler import TaskHandler
 from worker.common.types import ExternalJob, JobResult, JobResultBuilder
@@ -56,7 +53,7 @@ class SentinelDiscoverHandler(TaskHandler):
                 )
                 log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
                 for idx, scene in enumerate(scenes, 1):
-                    log_with_context(f"{idx} {scene["scene_id"]}", log_context)
+                    log_with_context(f"{idx} {scene['scene_id']}", log_context)
             except Exception as e:
                 error_msg = repr(e)
                 log_with_context(error_msg, log_context)
@@ -92,7 +89,7 @@ class SentinelContinuousDiscoveryHandler(TaskHandler):
             limit = self.get_config("limit", 1000)
             timewindow_hours = self.get_config("timewindow_hours", 1)
             filter_param = self.get_config("filter", None)
-            start_time, end_time = self.determine_search_interal(job, timewindow_hours)
+            start_time, end_time = determine_search_interal(job, timewindow_hours)
 
             filter_base = f"(PublicationDate ge {start_time} and PublicationDate lt {end_time}) and Online eq true"
             # filters_param = [
@@ -116,7 +113,7 @@ class SentinelContinuousDiscoveryHandler(TaskHandler):
                 scenes = cdse.search(api_url=url, max_items=limit, filters=filters)
                 log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
                 for idx, scene in enumerate(scenes, 1):
-                    log_with_context(f"{idx} {scene["scene_id"]}", log_context)
+                    log_with_context(f"{idx} {scene['scene_id']}", log_context)
             except Exception as e:
                 error_msg = repr(e)
                 log_with_context(error_msg, log_context)
@@ -127,18 +124,6 @@ class SentinelContinuousDiscoveryHandler(TaskHandler):
 
         scenes = []
         return result.success().variable_json(name="scenes", value=scenes)
-
-    def determine_search_interal(self, job: ExternalJob, timedelta_hours: float) -> tuple[str, str]:
-        history = flowable_client.get_process_instance_history(job.process_instance_id)
-        if "startTime" in history:
-            current_time = parse(history["startTime"])
-        else:
-            current_time = datetime.datetime.now()
-        end_time = datetime.datetime(current_time.year, current_time.month, current_time.day, current_time.hour)
-        start_time = end_time - datetime.timedelta(hours=timedelta_hours)
-        start_time = start_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        end_time = end_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        return start_time, end_time
 
 
 class SentinelDownloadHandler(TaskHandler):
