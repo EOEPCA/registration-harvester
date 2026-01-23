@@ -188,21 +188,19 @@ class StacCollectionHandler(TaskHandler):
                         client = pystac_client.Client.open(catalog_url)
                         collection = client.get_collection(collection_name)
 
-                        # avoid getting all items with  collection.get_all_items(), might be too much and takes to long (timeouts)
+                        # avoid getting all items with  collection.get_all_items()
                         # use default filter expression instead, if none is given
                         datetime_interval = job.get_variable("datetime")
                         param_bbox = job.get_variable("bbox")
                         bbox = param_bbox.split(",") if param_bbox is not None and len(param_bbox) > 0 else None
 
-                        if not datetime_interval:
+                        if datetime_interval is None:
                             timewindow_hours = self.get_config("timewindow_hours", 1)
                             start_time, end_time = determine_search_interal(job, timewindow_hours)
                             datetime_interval = f"{start_time}/{end_time}"
 
-                        log_with_context(
-                            f"Determine items to harvest from collection using filter: datetime_interval='{datetime_interval}' and bbox='{bbox}'",
-                            log_context,
-                        )
+                        log_with_context("Determine items to harvest from collection ...", log_context)
+                        log_with_context(f"datetime_interval='{datetime_interval}' and bbox='{bbox}'", log_context)
                         client = pystac_client.Client.open(catalog_url)
                         search = client.search(
                             collections=[collection_name],

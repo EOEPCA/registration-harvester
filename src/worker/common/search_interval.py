@@ -6,7 +6,7 @@ from worker.common.client import flowable_client
 from worker.common.types import ExternalJob
 
 
-def determine_search_interal(self, job: ExternalJob, timedelta_hours: float) -> tuple[str, str]:
+def determine_search_interal(job: ExternalJob, timedelta_hours: float) -> tuple[str, str]:
     history = flowable_client.get_process_instance_history(job.process_instance_id)
     if "startTime" in history:
         current_time = parse(history["startTime"])
