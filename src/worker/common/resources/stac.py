@@ -9,6 +9,7 @@ from pystac.extensions.file import FileExtension
 from requests.auth import HTTPBasicAuth
 
 from worker.common.base.file import get_file_size, get_folder_size
+from worker.common.log_utils import log_with_context
 
 
 def extract_by_function_name(scene_path: str, function_name: str, stac_function_options: dict):
@@ -83,6 +84,29 @@ def add_asset_filesize(stac):
     return stac
 
 
+def validate_configured_prefix_rewrite(rewrite_config, log_context=None):
+    """
+    Given the prefix rewrite settings from the config return the rewrite to use
+    (default if rewrite_config is None).
+    """
+    # Asset href rewriting
+    # - By default - preserve existing behaviour - i.e. prefix 'file://'
+    rewrite_asset_hrefs = rewrite_config or {"prefix_from": "", "prefix_to": "file://"}
+    if "prefix_from" in rewrite_asset_hrefs and "prefix_to" in rewrite_asset_hrefs:
+        log_with_context(
+            (
+                "Rewriting asset hrefs with prefix "
+                f"{rewrite_asset_hrefs['prefix_from']} -> {rewrite_asset_hrefs['prefix_to']}"
+            ),
+            log_context,
+        )
+    else:
+        rewrite_asset_hrefs = None
+        log_with_context("Incomplete configuration for asset hrefs rewriting, skipping ...", log_context, "warning")
+
+    return rewrite_asset_hrefs
+
+
 def asset_hrefs_rewrite(stac_item, prefix_from, prefix_to):
     """
     Rewrite asset hrefs in a STAC item by replacing a given prefix with a new prefix.
@@ -95,6 +119,9 @@ def asset_hrefs_rewrite(stac_item, prefix_from, prefix_to):
     Returns:
         The updated pystac.Item object
     """
+    if prefix_from == prefix_to:
+        return stac_item
+
     for asset in stac_item.assets.values():
         if asset.href.startswith(prefix_from):
             asset.href = asset.href.replace(prefix_from, prefix_to, 1)
@@ -152,8 +179,18 @@ def register_metadata(
 
         if r.status_code >= 300:
             raise Exception(
-                "Error: %s request of product %s not successfull. Status code: %s. Reason: %s. Response content: %s"
-                % (api_action, stac.id, r.status_code, r.reason, r.content),
+                (
+                    "Error: %s request of product %s not successfull. "
+                    + "Status code: %s. Reason: %s. Response content: %s URL: %s"
+                )
+                % (
+                    api_action,
+                    stac.id,
+                    r.status_code,
+                    r.reason,
+                    r.content,
+                    f"{api_url}/collections/{stac.collection_id}/items",
+                ),
             )
         else:
             print("%s request of product %s in collection %s successfull." % (api_action, stac.id, stac.collection_id))
