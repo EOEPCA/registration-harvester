@@ -196,11 +196,6 @@ def create_metadata(scene_path, scene_id, return_pystac=False, add_file_size=Fal
         elif scene_id.startswith("S3"):
             stac_item = modify_s3_stac(stac_item, stac_collection)
 
-        # Add file:// protocol for local file paths
-        for asset in stac_item.assets:
-            if stac_item.assets[asset].href.startswith("/"):
-                stac_item.assets[asset].href = "file://%s" % stac_item.assets[asset].href
-
         if add_file_size:
             stac_item = add_asset_filesize(stac_item)
 

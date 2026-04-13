@@ -405,6 +405,9 @@ class SentinelRegisterMetadataHandler(TaskHandler):
             log_with_context("Invalid input variables", log_context)
             return result.failure()
 
+        # Asset href rewriting
+        rewrite_asset_hrefs = self.get_config("rewrite_asset_hrefs", None)
+
         try:
             stac.register_metadata(
                 stac_file=stac_item,
@@ -414,9 +417,10 @@ class SentinelRegisterMetadataHandler(TaskHandler):
                 api_pw=api_pw,
                 api_ca_cert=api_ca_cert,
                 file_deletion=file_deletion,
+                rewrite_asset_hrefs=rewrite_asset_hrefs,
             )
 
             return result.success()
         except Exception as e:
-            log_with_context(f"Error registering metadata: {str(e)}", log_context)
+            log_with_context(f"Error registering metadata: {str(e)} at URL {str(api_url)}", log_context)
             return result.failure()
