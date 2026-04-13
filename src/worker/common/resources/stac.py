@@ -105,9 +105,10 @@ def register_metadata(
     stac_file,
     collection,
     api_url,
-    api_user,
-    api_pw,
-    api_ca_cert,
+    api_user=None,
+    api_pw=None,
+    api_token=None,
+    api_ca_cert=None,
     file_deletion=False,
     rewrite_asset_hrefs=None,
 ):
@@ -136,14 +137,19 @@ def register_metadata(
             )
 
         # Conduct request to STAC API
+        headers = {"Content-Type": "application/json"}
         session = requests.Session()
         if api_user is not None and api_pw is not None:
             session.auth = HTTPBasicAuth(api_user, api_pw)
         if api_ca_cert is not None:
             session.verify = api_ca_cert
+        if api_token is not None:
+            headers["Authorization"] = f"Bearer {api_token}"
 
         api_action = "insert"
-        r = session.post("%s/collections/%s/items" % (api_url, stac.collection_id), json=stac.to_dict())
+        r = session.post(
+            "%s/collections/%s/items" % (api_url, stac.collection_id), json=stac.to_dict(), headers=headers
+        )
         if r.status_code == 409:
             # Product already exists -> update
             stac.properties["updated"] = str(datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ"))

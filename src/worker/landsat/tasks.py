@@ -358,6 +358,9 @@ class LandsatRegisterMetadataHandler(TaskHandler):
                 "Job input validation failed", f"Variables {vars_not_set} must not be empty", result, retries=0
             )
 
+        # Get token to access protected endpoints of catalog
+        token = self.iam_client.get_access_token()
+
         try:
             stac.register_metadata(
                 stac_file=scene_stac_file,
@@ -365,6 +368,7 @@ class LandsatRegisterMetadataHandler(TaskHandler):
                 api_url=api_url,
                 api_user=api_user,
                 api_pw=api_pw,
+                api_token=token,
                 api_ca_cert=api_ca_cert,
                 file_deletion=file_deletion,
                 rewrite_asset_hrefs=rewrite_asset_hrefs,
