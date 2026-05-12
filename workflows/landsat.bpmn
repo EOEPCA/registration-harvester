@@ -13,29 +13,28 @@
         <bpmn:flowNodeRef>SequenceFlow_5</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>SequenceFlow_7</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>SequenceFlow_2</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>SequenceFlow_9</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>landsat_ondemand_discovery</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>landsat_scene_ingestion</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>landsat_get_download_urls</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>landsat_continuous_discovery</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Exclusive_Databased_Gateway_2</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>landsat_timer_start_event</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>EndNoneEvent_4</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>landsat_start_event</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>landsat_timer_start_event</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
     <bpmn:serviceTask id="landsat_ondemand_discovery" name="On-demand Discovery" camunda:asyncAfter="true" camunda:type="external" camunda:topic="landsat_ondemand_discovery" />
     <bpmn:callActivity id="landsat_scene_ingestion" name="Landsat Scene Ingestion" calledElement="landsat-scene-ingestion">
+      <bpmn:extensionElements>
+        <camunda:in source="scene" target="scene" />
+      </bpmn:extensionElements>
       <bpmn:multiInstanceLoopCharacteristics camunda:asyncAfter="true" camunda:collection="${scenes.elements()}" camunda:elementVariable="scene" />
     </bpmn:callActivity>
     <bpmn:serviceTask id="landsat_get_download_urls" name="Get Download URLs" camunda:asyncAfter="true" camunda:type="external" camunda:topic="landsat_get_download_urls" />
-    <bpmn:serviceTask id="landsat_continuous_discovery" name="Continuous Discovery" camunda:asyncAfter="true" camunda:type="external" camunda:topic="landsat_continuous_discovery" />
+    <bpmn:serviceTask id="landsat_continuous_discovery" name="Continuous Discovery" camunda:asyncAfter="true" camunda:type="external" camunda:topic="landsat_continuous_discovery">
+      <bpmn:incoming>Flow_0xrk5pr</bpmn:incoming>
+    </bpmn:serviceTask>
     <bpmn:exclusiveGateway id="Exclusive_Databased_Gateway_2" />
-    <bpmn:startEvent id="landsat_timer_start_event" name="Start every hour" isInterrupting="false">
-      <bpmn:timerEventDefinition>
-        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">0 0 * * * ?</bpmn:timeCycle>
-      </bpmn:timerEventDefinition>
-    </bpmn:startEvent>
     <bpmn:endEvent id="EndNoneEvent_4" name="Done" />
     <bpmn:sequenceFlow id="SequenceFlow_2" sourceRef="landsat_start_event" targetRef="landsat_ondemand_discovery" />
     <bpmn:sequenceFlow id="SequenceFlow_3" sourceRef="landsat_ondemand_discovery" targetRef="Exclusive_Databased_Gateway_2" />
@@ -44,7 +43,6 @@
     <bpmn:sequenceFlow id="SequenceFlow_5" name="scenes found" sourceRef="Exclusive_Databased_Gateway_2" targetRef="landsat_get_download_urls">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{!S(scenes).elements().isEmpty()}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="SequenceFlow_9" sourceRef="landsat_timer_start_event" targetRef="landsat_continuous_discovery" />
     <bpmn:sequenceFlow id="SequenceFlow_10" sourceRef="landsat_continuous_discovery" targetRef="Exclusive_Databased_Gateway_2" />
     <bpmn:sequenceFlow id="SequenceFlow_7" name="no scenes found" sourceRef="Exclusive_Databased_Gateway_2" targetRef="EndNoneEvent_4">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{S(scenes).elements().isEmpty()}</bpmn:conditionExpression>
@@ -52,6 +50,13 @@
     <bpmn:startEvent id="landsat_start_event" name="Start manually">
       <bpmn:outgoing>SequenceFlow_2</bpmn:outgoing>
       <bpmn:messageEventDefinition id="MessageEventDefinition_1ti58f2" messageRef="Message_2r57gbh" />
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_0xrk5pr" sourceRef="landsat_timer_start_event" targetRef="landsat_continuous_discovery" />
+    <bpmn:startEvent id="landsat_timer_start_event" name="Start every hour">
+      <bpmn:outgoing>Flow_0xrk5pr</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_1l1rk1n">
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">0 0 * * * ?</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
     </bpmn:startEvent>
   </bpmn:process>
   <bpmn:message id="Message_2r57gbh" name="landsat-start-order" />
@@ -80,12 +85,6 @@
       <bpmndi:BPMNShape id="BPMNShape_Exclusive_Databased_Gateway_2" bpmnElement="Exclusive_Databased_Gateway_2" isMarkerVisible="true">
         <dc:Bounds x="517" y="291" width="40" height="40" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="BPMNShape_StartTimerEvent_4" bpmnElement="landsat_timer_start_event">
-        <dc:Bounds x="268" y="162" width="30" height="30" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="240" y="196" width="79" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="BPMNShape_EndNoneEvent_4" bpmnElement="EndNoneEvent_4">
         <dc:Bounds x="1029" y="297" width="28" height="28" />
         <bpmndi:BPMNLabel>
@@ -96,6 +95,12 @@
         <dc:Bounds x="268" y="296" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="249" y="335" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1dh9ycc_di" bpmnElement="landsat_timer_start_event">
+        <dc:Bounds x="268" y="159" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="247" y="202" width="79" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_2" bpmnElement="SequenceFlow_2">
@@ -121,10 +126,6 @@
           <dc:Bounds x="587" y="293" width="66" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_9" bpmnElement="SequenceFlow_9">
-        <di:waypoint x="298" y="177" />
-        <di:waypoint x="367" y="177" />
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_10" bpmnElement="SequenceFlow_10">
         <di:waypoint x="467" y="177" />
         <di:waypoint x="537" y="177" />
@@ -138,6 +139,10 @@
         <bpmndi:BPMNLabel>
           <dc:Bounds x="729" y="403" width="81" height="14" />
         </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0xrk5pr_di" bpmnElement="Flow_0xrk5pr">
+        <di:waypoint x="304" y="177" />
+        <di:waypoint x="367" y="177" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

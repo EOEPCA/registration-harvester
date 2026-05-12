@@ -1,196 +1,129 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:flowable="http://flowable.org/bpmn" xmlns:design="http://flowable.org/design" targetNamespace="http://flowable.org/test" design:palette="flowable-work-process-palette">
-  <collaboration id="Collaboration">
-    <participant id="bpmnPool_8" name="Sentinel Registration" processRef="sentinelRegistration" />
-  </collaboration>
-  <process id="sentinelRegistration" name="Sentinel Registration" isExecutable="true" flowable:candidateStarterGroups="flowableUser">
-    <extensionElements>
-      <design:stencilid>BPMNDiagram</design:stencilid>
-      <design:creationdate>2024-10-24T08:10:03.801Z</design:creationdate>
-      <design:modificationdate>2025-01-09T15:20:12.382Z</design:modificationdate>
-    </extensionElements>
-    <laneSet id="laneSet_sentinelRegistration">
-      <lane id="bpmnLane_9">
-        <flowNodeRef>bpmnCallActivity_6</flowNodeRef>
-        <flowNodeRef>bpmnTask_1</flowNodeRef>
-        <flowNodeRef>ExternalWorkerTask_9</flowNodeRef>
-        <flowNodeRef>bpmnGateway_4</flowNodeRef>
-        <flowNodeRef>bpmnStartEvent_3</flowNodeRef>
-        <flowNodeRef>StartNoneEvent_9</flowNodeRef>
-        <flowNodeRef>bpmnEndEvent_6</flowNodeRef>
-        <flowNodeRef>bpmnSequenceFlow_8</flowNodeRef>
-        <flowNodeRef>bpmnSequenceFlow_5</flowNodeRef>
-        <flowNodeRef>SequenceFlow_9</flowNodeRef>
-        <flowNodeRef>bpmnSequenceFlow_9</flowNodeRef>
-        <flowNodeRef>bpmnSequenceFlow_10</flowNodeRef>
-        <flowNodeRef>bpmnSequenceFlow_2</flowNodeRef>
-        <flowNodeRef>SequenceFlow_10</flowNodeRef>
-      </lane>
-    </laneSet>
-    <callActivity id="bpmnCallActivity_6" name="Sentinel Scene Ingestion" calledElement="sentinelSceneIngestion" flowable:fallbackToDefaultTenant="true">
-      <extensionElements>
-        <flowable:in source="scene" target="scene" />
-        <design:stencilid>CallActivity</design:stencilid>
-      </extensionElements>
-      <multiInstanceLoopCharacteristics flowable:collection="scenes" flowable:elementVariable="scene">
-        <extensionElements />
-      </multiInstanceLoopCharacteristics>
-    </callActivity>
-    <serviceTask id="bpmnTask_1" name="Continuous Discovery" flowable:type="external-worker" flowable:topic="sentinel_continuous_data_discovery">
-      <extensionElements>
-        <design:stencilid>ExternalWorkerTask</design:stencilid>
-        <design:stencilsuperid>Task</design:stencilsuperid>
-      </extensionElements>
-    </serviceTask>
-    <serviceTask id="ExternalWorkerTask_9" name="Discover Data" flowable:type="external-worker" flowable:topic="sentinel_discover_data">
-      <extensionElements>
-        <design:stencilid>ExternalWorkerTask</design:stencilid>
-        <design:stencilsuperid>Task</design:stencilsuperid>
-      </extensionElements>
-    </serviceTask>
-    <exclusiveGateway id="bpmnGateway_4">
-      <extensionElements>
-        <design:stencilid>Exclusive_Databased_Gateway</design:stencilid>
-      </extensionElements>
-    </exclusiveGateway>
-    <startEvent id="bpmnStartEvent_3" name="Start every hour" isInterrupting="false" flowable:initiator="initiator">
-      <extensionElements>
-        <flowable:work-form-field-validation>false</flowable:work-form-field-validation>
-        <design:stencilid>StartTimerEvent</design:stencilid>
-        <design:display_ref_in_diagram>true</design:display_ref_in_diagram>
-      </extensionElements>
-      <timerEventDefinition>
-        <timeCycle>R/P0Y0M0DT1H0M0S</timeCycle>
-      </timerEventDefinition>
-    </startEvent>
-    <startEvent id="StartNoneEvent_9" name="Start manually" flowable:initiator="initiator" flowable:formFieldValidation="false">
-      <extensionElements>
-        <flowable:work-form-field-validation>false</flowable:work-form-field-validation>
-        <design:stencilid>StartNoneEvent</design:stencilid>
-        <design:display_ref_in_diagram>true</design:display_ref_in_diagram>
-      </extensionElements>
-    </startEvent>
-    <endEvent id="bpmnEndEvent_6" name="Done">
-      <extensionElements>
-        <design:stencilid>EndNoneEvent</design:stencilid>
-        <design:display_ref_in_diagram>true</design:display_ref_in_diagram>
-      </extensionElements>
-    </endEvent>
-    <sequenceFlow id="bpmnSequenceFlow_8" sourceRef="bpmnCallActivity_6" targetRef="bpmnEndEvent_6">
-      <extensionElements>
-        <design:stencilid>SequenceFlow</design:stencilid>
-      </extensionElements>
-    </sequenceFlow>
-    <sequenceFlow id="bpmnSequenceFlow_5" sourceRef="bpmnTask_1" targetRef="bpmnGateway_4">
-      <extensionElements>
-        <design:stencilid>SequenceFlow</design:stencilid>
-      </extensionElements>
-    </sequenceFlow>
-    <sequenceFlow id="SequenceFlow_9" sourceRef="ExternalWorkerTask_9" targetRef="bpmnGateway_4">
-      <extensionElements>
-        <design:stencilid>SequenceFlow</design:stencilid>
-      </extensionElements>
-    </sequenceFlow>
-    <sequenceFlow id="bpmnSequenceFlow_9" name="scenes found" sourceRef="bpmnGateway_4" targetRef="bpmnCallActivity_6">
-      <extensionElements>
-        <design:stencilid>SequenceFlow</design:stencilid>
-        <design:display_ref_in_diagram>true</design:display_ref_in_diagram>
-      </extensionElements>
-      <conditionExpression xsi:type="tFormalExpression">${var:isNotEmpty(scenes)}</conditionExpression>
-    </sequenceFlow>
-    <sequenceFlow id="bpmnSequenceFlow_10" name="no scenes found" sourceRef="bpmnGateway_4" targetRef="bpmnEndEvent_6">
-      <extensionElements>
-        <design:stencilid>SequenceFlow</design:stencilid>
-        <design:display_ref_in_diagram>true</design:display_ref_in_diagram>
-      </extensionElements>
-      <conditionExpression xsi:type="tFormalExpression">${var:isEmpty(scenes)}</conditionExpression>
-    </sequenceFlow>
-    <sequenceFlow id="bpmnSequenceFlow_2" sourceRef="bpmnStartEvent_3" targetRef="bpmnTask_1">
-      <extensionElements>
-        <design:stencilid>SequenceFlow</design:stencilid>
-      </extensionElements>
-    </sequenceFlow>
-    <sequenceFlow id="SequenceFlow_10" sourceRef="StartNoneEvent_9" targetRef="ExternalWorkerTask_9">
-      <extensionElements>
-        <design:stencilid>SequenceFlow</design:stencilid>
-      </extensionElements>
-    </sequenceFlow>
-  </process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_Collaboration">
-    <bpmndi:BPMNPlane id="BPMNPlane_Collaboration" bpmnElement="Collaboration">
-      <bpmndi:BPMNShape id="BPMNShape_bpmnPool_8" bpmnElement="bpmnPool_8">
-        <omgdc:Bounds x="239" y="212" width="954" height="448" />
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_16rp7nh" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.20.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.20.0">
+  <bpmn:message id="Message_3u04e9s" name="sentinel-start-order" />
+  <bpmn:collaboration id="Collaboration_062u33n">
+    <bpmn:participant id="Pool_1" name="Sentinel Data Ingestion" processRef="sentinel-data-ingestion" />
+  </bpmn:collaboration>
+  <bpmn:process id="sentinel-data-ingestion" name="Sentinel Data Ingestion" isExecutable="true" camunda:historyTimeToLive="1">
+    <bpmn:startEvent id="sentinel_timer_start_event" name="Start every hour">
+      <bpmn:outgoing>Flow_0ek6gn8</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_1mse4fw">
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">0 0 * * * ?</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:startEvent id="sentinel_start_event" name="Start manually">
+      <bpmn:outgoing>Flow_1iv0i8v</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_0at8s0z" messageRef="Message_3u04e9s" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="sentinel_continuous_discovery" name="Continuous Discovery" camunda:asyncAfter="true" camunda:type="external" camunda:topic="sentinel_continuous_discovery">
+      <bpmn:incoming>Flow_0ek6gn8</bpmn:incoming>
+      <bpmn:outgoing>Flow_1xx1ah2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0ek6gn8" sourceRef="sentinel_timer_start_event" targetRef="sentinel_continuous_discovery" />
+    <bpmn:sequenceFlow id="Flow_1iv0i8v" sourceRef="sentinel_start_event" targetRef="sentinel_ondemand_discovery" />
+    <bpmn:serviceTask id="sentinel_ondemand_discovery" name="On-demand Discovery" camunda:asyncAfter="true" camunda:type="external" camunda:topic="sentinel_ondemand_discovery">
+      <bpmn:incoming>Flow_1iv0i8v</bpmn:incoming>
+      <bpmn:outgoing>Flow_0pdlcz5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0pdlcz5" sourceRef="sentinel_ondemand_discovery" targetRef="Gateway_11p37gr" />
+    <bpmn:sequenceFlow id="Flow_1xx1ah2" sourceRef="sentinel_continuous_discovery" targetRef="Gateway_11p37gr" />
+    <bpmn:sequenceFlow id="Flow_1k4n5o7" name="scenes found" sourceRef="Gateway_11p37gr" targetRef="sentinel_scene_ingestion">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{!S(scenes).elements().isEmpty()}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_0kbc8tw" sourceRef="sentinel_scene_ingestion" targetRef="Event_1guz2an" />
+    <bpmn:sequenceFlow id="Flow_0cmgyn1" name="no scenes found" sourceRef="Gateway_11p37gr" targetRef="Event_1guz2an">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{S(scenes).elements().isEmpty()}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:endEvent id="Event_1guz2an">
+      <bpmn:incoming>Flow_0kbc8tw</bpmn:incoming>
+      <bpmn:incoming>Flow_0cmgyn1</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:callActivity id="sentinel_scene_ingestion" name="Sentinel Scene Ingestion" calledElement="sentinel-scene-ingestion">
+      <bpmn:extensionElements>
+        <camunda:in source="scene" target="scene" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1k4n5o7</bpmn:incoming>
+      <bpmn:outgoing>Flow_0kbc8tw</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics camunda:asyncAfter="true" camunda:collection="${scenes.elements()}" />
+    </bpmn:callActivity>
+    <bpmn:exclusiveGateway id="Gateway_11p37gr">
+      <bpmn:incoming>Flow_0pdlcz5</bpmn:incoming>
+      <bpmn:incoming>Flow_1xx1ah2</bpmn:incoming>
+      <bpmn:outgoing>Flow_1k4n5o7</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0cmgyn1</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_062u33n">
+      <bpmndi:BPMNShape id="Participant_0py301l_di" bpmnElement="Pool_1" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="880" height="390" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="BPMNShape_bpmnLane_9" bpmnElement="bpmnLane_9">
-        <omgdc:Bounds x="269" y="212" width="924" height="448" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="BPMNShape_bpmnCallActivity_6" bpmnElement="bpmnCallActivity_6">
-        <omgdc:Bounds x="877" y="427" width="107" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="BPMNShape_bpmnTask_1" bpmnElement="bpmnTask_1">
-        <omgdc:Bounds x="497" y="292" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="BPMNShape_ExternalWorkerTask_9" bpmnElement="ExternalWorkerTask_9">
-        <omgdc:Bounds x="497" y="427" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="BPMNShape_bpmnGateway_4" bpmnElement="bpmnGateway_4" isMarkerVisible="true">
-        <omgdc:Bounds x="689" y="447" width="40" height="40" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="BPMNShape_bpmnStartEvent_3" bpmnElement="bpmnStartEvent_3">
-        <omgdc:Bounds x="375" y="317" width="30" height="30" />
+      <bpmndi:BPMNShape id="Event_14wnebn_di" bpmnElement="sentinel_timer_start_event">
+        <dc:Bounds x="272" y="162" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <omgdc:Bounds x="343.7" y="353" width="98" height="18" />
+          <dc:Bounds x="251" y="205" width="79" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="BPMNShape_StartNoneEvent_9" bpmnElement="StartNoneEvent_9">
-        <omgdc:Bounds x="375" y="452" width="30" height="30" />
+      <bpmndi:BPMNShape id="Event_1op7jzd_di" bpmnElement="sentinel_start_event">
+        <dc:Bounds x="272" y="272" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <omgdc:Bounds x="343.8" y="488" width="88" height="18" />
+          <dc:Bounds x="255" y="315" width="71" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="BPMNShape_bpmnEndEvent_6" bpmnElement="bpmnEndEvent_6">
-        <omgdc:Bounds x="1086" y="453" width="28" height="28" />
-        <bpmndi:BPMNLabel>
-          <omgdc:Bounds x="1085.8" y="422" width="32" height="18" />
-        </bpmndi:BPMNLabel>
+      <bpmndi:BPMNShape id="Activity_07qhb85_di" bpmnElement="sentinel_continuous_discovery">
+        <dc:Bounds x="360" y="140" width="100" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="BPMNEdge_bpmnSequenceFlow_8" bpmnElement="bpmnSequenceFlow_8" flowable:sourceDockerX="54.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
-        <omgdi:waypoint x="984" y="467" />
-        <omgdi:waypoint x="1086" y="467" />
+      <bpmndi:BPMNShape id="Activity_1l5div4_di" bpmnElement="sentinel_ondemand_discovery">
+        <dc:Bounds x="360" y="250" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1guz2an_di" bpmnElement="Event_1guz2an">
+        <dc:Bounds x="892" y="272" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0mzns4m_di" bpmnElement="sentinel_scene_ingestion">
+        <dc:Bounds x="700" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_11p37gr_di" bpmnElement="Gateway_11p37gr" isMarkerVisible="true">
+        <dc:Bounds x="535" y="265" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0ek6gn8_di" bpmnElement="Flow_0ek6gn8">
+        <di:waypoint x="308" y="180" />
+        <di:waypoint x="360" y="180" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="BPMNEdge_bpmnSequenceFlow_5" bpmnElement="bpmnSequenceFlow_5" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
-        <omgdi:waypoint x="597" y="332" />
-        <omgdi:waypoint x="709" y="332" />
-        <omgdi:waypoint x="709" y="447" />
+      <bpmndi:BPMNEdge id="Flow_1iv0i8v_di" bpmnElement="Flow_1iv0i8v">
+        <di:waypoint x="308" y="290" />
+        <di:waypoint x="360" y="290" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_9" bpmnElement="SequenceFlow_9" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
-        <omgdi:waypoint x="597" y="467" />
-        <omgdi:waypoint x="689" y="467" />
+      <bpmndi:BPMNEdge id="Flow_0pdlcz5_di" bpmnElement="Flow_0pdlcz5">
+        <di:waypoint x="460" y="290" />
+        <di:waypoint x="535" y="290" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="BPMNEdge_bpmnSequenceFlow_9" bpmnElement="bpmnSequenceFlow_9" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="54.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="729" y="467" />
-        <omgdi:waypoint x="877" y="467" />
+      <bpmndi:BPMNEdge id="Flow_1xx1ah2_di" bpmnElement="Flow_1xx1ah2">
+        <di:waypoint x="460" y="180" />
+        <di:waypoint x="560" y="180" />
+        <di:waypoint x="560" y="265" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1k4n5o7_di" bpmnElement="Flow_1k4n5o7">
+        <di:waypoint x="585" y="290" />
+        <di:waypoint x="700" y="290" />
         <bpmndi:BPMNLabel>
-          <omgdc:Bounds x="767" y="443" width="66" height="14" />
+          <dc:Bounds x="610" y="272" width="66" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="BPMNEdge_bpmnSequenceFlow_10" bpmnElement="bpmnSequenceFlow_10" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
-        <omgdi:waypoint x="709" y="487" />
-        <omgdi:waypoint x="709" y="581" />
-        <omgdi:waypoint x="1100" y="581" />
-        <omgdi:waypoint x="1100" y="481" />
+      <bpmndi:BPMNEdge id="Flow_0kbc8tw_di" bpmnElement="Flow_0kbc8tw">
+        <di:waypoint x="800" y="290" />
+        <di:waypoint x="892" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0cmgyn1_di" bpmnElement="Flow_0cmgyn1">
+        <di:waypoint x="560" y="315" />
+        <di:waypoint x="560" y="410" />
+        <di:waypoint x="910" y="410" />
+        <di:waypoint x="910" y="308" />
         <bpmndi:BPMNLabel>
-          <omgdc:Bounds x="859" y="563" width="81" height="14" />
+          <dc:Bounds x="695" y="392" width="81" height="14" />
         </bpmndi:BPMNLabel>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="BPMNEdge_bpmnSequenceFlow_2" bpmnElement="bpmnSequenceFlow_2" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="405" y="332" />
-        <omgdi:waypoint x="497" y="332" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_10" bpmnElement="SequenceFlow_10" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
-        <omgdi:waypoint x="405" y="467" />
-        <omgdi:waypoint x="497" y="467" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-</definitions>
+</bpmn:definitions>

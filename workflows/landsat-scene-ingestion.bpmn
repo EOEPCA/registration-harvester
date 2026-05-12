@@ -34,55 +34,55 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_Collaboration">
     <bpmndi:BPMNPlane id="BPMNPlane_Collaboration" bpmnElement="Collaboration">
       <bpmndi:BPMNShape id="BPMNShape_Pool_2" bpmnElement="Pool_2" isHorizontal="true">
-        <dc:Bounds x="155" y="76" width="927" height="204" />
+        <dc:Bounds x="181" y="78" width="927" height="204" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="BPMNShape_Lane_3" bpmnElement="Lane_3" isHorizontal="true">
-        <dc:Bounds x="185" y="76" width="897" height="204" />
+        <dc:Bounds x="211" y="78" width="897" height="204" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="BPMNShape_ExternalWorkerTask_1" bpmnElement="landsat_download_scene">
-        <dc:Bounds x="377" y="136" width="100" height="80" />
+        <dc:Bounds x="403" y="138" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="BPMNShape_ExternalWorkerTask_2" bpmnElement="landsat_unpack">
-        <dc:Bounds x="527" y="136" width="100" height="80" />
+        <dc:Bounds x="553" y="138" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="BPMNShape_ExternalWorkerTask_3" bpmnElement="landsat_extract_metadata">
-        <dc:Bounds x="677" y="136" width="100" height="80" />
+        <dc:Bounds x="703" y="138" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="BPMNShape_ExternalWorkerTask_4" bpmnElement="landsat_register_metadata">
-        <dc:Bounds x="827" y="136" width="100" height="80" />
+        <dc:Bounds x="853" y="138" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="BPMNShape_startnoneevent1" bpmnElement="startnoneevent1">
-        <dc:Bounds x="277" y="161" width="30" height="30" />
+        <dc:Bounds x="303" y="163" width="30" height="30" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="258" y="195" width="56" height="27" />
+          <dc:Bounds x="284" y="197" width="56" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="BPMNShape_EndNoneEvent_4" bpmnElement="EndNoneEvent_4">
-        <dc:Bounds x="977" y="162" width="28" height="28" />
+        <dc:Bounds x="1003" y="164" width="28" height="28" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="981" y="194" width="27" height="14" />
+          <dc:Bounds x="1007" y="196" width="27" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_2" bpmnElement="SequenceFlow_2">
-        <di:waypoint x="307" y="176" />
-        <di:waypoint x="377" y="176" />
+        <di:waypoint x="333" y="178" />
+        <di:waypoint x="403" y="178" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_3" bpmnElement="SequenceFlow_3">
-        <di:waypoint x="477" y="176" />
-        <di:waypoint x="527" y="176" />
+        <di:waypoint x="503" y="178" />
+        <di:waypoint x="553" y="178" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_4" bpmnElement="SequenceFlow_4">
-        <di:waypoint x="627" y="176" />
-        <di:waypoint x="677" y="176" />
+        <di:waypoint x="653" y="178" />
+        <di:waypoint x="703" y="178" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_5" bpmnElement="SequenceFlow_5">
-        <di:waypoint x="777" y="176" />
-        <di:waypoint x="827" y="176" />
+        <di:waypoint x="803" y="178" />
+        <di:waypoint x="853" y="178" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_6" bpmnElement="SequenceFlow_6">
-        <di:waypoint x="927" y="176" />
-        <di:waypoint x="977" y="176" />
+        <di:waypoint x="953" y="178" />
+        <di:waypoint x="1003" y="178" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
