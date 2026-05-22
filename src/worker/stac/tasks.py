@@ -7,18 +7,18 @@ from eodm.extract import extract_stac_api_collections
 from eodm.load import load_stac_api_collections, load_stac_api_items
 from eodm.stac_contrib import FSSpecStacIO
 from httpx import HTTPStatusError
+from operaton.external_task.external_task import ExternalTask, TaskResult
 from pystac import Catalog, Collection, Item, StacIO
 
 from worker.common.log_utils import configure_logging, log_with_context
 from worker.common.search_interval import determine_search_interal
 from worker.common.task_handler import TaskHandler
-from worker.common.types import ExternalJob, JobResult, JobResultBuilder
 
 configure_logging()
 
 
 class StacCatalogHandler(TaskHandler):
-    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
+    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
         """
         Load STAC catalog and extract collection paths
 
@@ -31,15 +31,24 @@ class StacCatalogHandler(TaskHandler):
         Variables set:
             stac_collection_source: List of collection URIs (can be local paths, HTTP/HTTPS URLs, or S3 URLs)
         """
-        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
+
+        log_context = {
+            "WORKER_ID": task.get_worker_id(),
+            "TASK_ID": task.get_task_id(),
+            "TOPIC_NAME": task.get_topic_name(),
+        }
 
         # Get the STAC catalog URI
-        stac_catalog_source = job.get_variable("stac_catalog_source")
+        stac_catalog_source = task.get_variable("stac_catalog_source")
         if not stac_catalog_source:
-            log_with_context("Missing required variable: stac_catalog_source", log_context)
-            return result.failure()
+            return task.failure(
+                error_message="Missing input variable",
+                error_details="The variable stac_catalog_source is missing",
+                max_retries=0,
+                retry_timeout=0,
+            )
 
-        stac_catalog_collections = job.get_variable("stac_catalog_collections")
+        stac_catalog_collections = task.get_variable("stac_catalog_collections")
         if not stac_catalog_collections:
             log_with_context(
                 f"No collections provided. All collections from {stac_catalog_source} will be harvested", log_context
@@ -72,9 +81,7 @@ class StacCatalogHandler(TaskHandler):
                         stac_type = comps[-2]
 
                         if stac_type == "collections":
-                            return result.success().variable_json(
-                                name="stac_collection_source", value=[stac_catalog_source]
-                            )
+                            return task.complete(global_variables={"stac_collection_source": [stac_catalog_source]})
                         else:
                             raise e
                     except Exception:
@@ -95,9 +102,9 @@ class StacCatalogHandler(TaskHandler):
                 # Handle S3
                 case s3_value if s3_value.startswith("s3://"):
                     # Get optional S3 variables
-                    s3_endpoint_url = job.get_variable("s3_endpoint_url")
-                    s3_access_key = job.get_variable("s3_access_key")
-                    s3_secret_key = job.get_variable("s3_secret_key")
+                    s3_endpoint_url = task.get_variable("s3_endpoint_url")
+                    s3_access_key = task.get_variable("s3_access_key")
+                    s3_secret_key = task.get_variable("s3_secret_key")
                     if not s3_endpoint_url or not s3_access_key or not s3_secret_key:
                         raise ValueError("Missing required S3 variables: s3_endpoint_url, s3_access_key, s3_secret_key")
 
@@ -113,23 +120,29 @@ class StacCatalogHandler(TaskHandler):
 
                 # Default
                 case _:
-                    log_with_context(
-                        f"Error loading catalog: Could not handle source {stac_catalog_source}", log_context
+                    return task.failure(
+                        error_message="Error loading catalog",
+                        error_details=f"Could not handle source {stac_catalog_source}",
+                        max_retries=0,
+                        retry_timeout=0,
                     )
-                    return result.failure()
 
         except Exception as e:
-            log_with_context(f"Error loading catalog: {str(e)}", log_context)
-            return result.failure()
+            return task.failure(
+                error_message="Error loading catalog",
+                error_details=str(e),
+                max_retries=3,
+                retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
+            )
 
         log_with_context(
             f"Loaded catalog. Starting {len(stac_collection_source)} StacCollectionHandler tasks.", log_context
         )
-        return result.success().variable_json(name="stac_collection_source", value=stac_collection_source)
+        return task.complete(global_variables={"stac_collection_source": stac_collection_source})
 
 
 class StacCollectionHandler(TaskHandler):
-    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
+    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
         """
         Publish STAC collection to STAC API
 
@@ -142,14 +155,19 @@ class StacCollectionHandler(TaskHandler):
         Variables set:
             stac_item_source: List of item URIs (can be local paths, HTTP/HTTPS URLs, or S3 URLs)
         """
-        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
+
+        log_context = {
+            "WORKER_ID": task.get_worker_id(),
+            "TASK_ID": task.get_task_id(),
+            "TOPIC_NAME": task.get_topic_name(),
+        }
 
         # Get and validate job variables
-        stac_collection_source = job.get_variable("stac_collection_source")
+        stac_collection_source = task.get_variable("stac_collection_source")
         if not stac_collection_source:
             raise ValueError("Missing required variable: stac_collection_source")
         stac_update_collections = True
-        stac_update_collections_param = job.get_variable("stac_update_collections")
+        stac_update_collections_param = task.get_variable("stac_update_collections")
         if stac_update_collections_param is not None:
             if isinstance(stac_update_collections_param, str):
                 stac_update_collections = stac_update_collections_param.lower() == "true"
@@ -190,13 +208,13 @@ class StacCollectionHandler(TaskHandler):
 
                         # avoid getting all items with  collection.get_all_items()
                         # use default filter expression instead, if none is given
-                        datetime_interval = job.get_variable("datetime")
-                        param_bbox = job.get_variable("bbox")
+                        datetime_interval = task.get_variable("datetime")
+                        param_bbox = task.get_variable("bbox")
                         bbox = param_bbox.split(",") if param_bbox is not None and len(param_bbox) > 0 else None
 
                         if datetime_interval is None:
                             timewindow_hours = self.get_config("timewindow_hours", 1)
-                            start_time, end_time = determine_search_interal(job, timewindow_hours)
+                            start_time, end_time = determine_search_interal(task, timewindow_hours)
                             datetime_interval = f"{start_time}/{end_time}"
 
                         log_with_context("Determine items to harvest from collection ...", log_context)
@@ -225,9 +243,9 @@ class StacCollectionHandler(TaskHandler):
                 # Handle S3
                 case s3_value if s3_value.startswith("s3://"):
                     # Get optional S3 variables
-                    s3_endpoint_url = job.get_variable("s3_endpoint_url")
-                    s3_access_key = job.get_variable("s3_access_key")
-                    s3_secret_key = job.get_variable("s3_secret_key")
+                    s3_endpoint_url = task.get_variable("s3_endpoint_url")
+                    s3_access_key = task.get_variable("s3_access_key")
+                    s3_secret_key = task.get_variable("s3_secret_key")
                     if not s3_endpoint_url or not s3_access_key or not s3_secret_key:
                         raise ValueError("Missing required S3 variables: s3_endpoint_url, s3_access_key, s3_secret_key")
 
@@ -241,14 +259,20 @@ class StacCollectionHandler(TaskHandler):
 
                 # Default
                 case _:
-                    log_with_context(
-                        f"Error loading collection: Could not handle source {stac_collection_source}", log_context
+                    return task.failure(
+                        error_message="Error loading collection",
+                        error_details=f"Could not handle source {stac_collection_source}",
+                        max_retries=3,
+                        retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
                     )
-                    return result.failure()
 
         except Exception as e:
-            log_with_context(f"Error loading catalog: {str(e)}", log_context)
-            return result.failure()
+            return task.failure(
+                error_message="Error loading catalog",
+                error_details=str(e),
+                max_retries=3,
+                retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
+            )
 
         # Get token to access protected endpoints of catalog
         token = self.iam_client.get_access_token()
@@ -274,18 +298,23 @@ class StacCollectionHandler(TaskHandler):
                     + "To update this resource set process variable stac_update_collections to true"
                 )
         except Exception as e:
-            log_with_context(f"Error publishing collection: {str(e)}", log_context)
-            return result.failure()
+            return task.failure(
+                error_message="Error publishing collection",
+                error_details=str(e),
+                max_retries=3,
+                retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
+            )
 
         log_with_context(
             f"Published collection {collection.id}. Starting {len(stac_item_source)} StacItemHandler tasks.",
             log_context,
         )
-        return result.success().variable_json(name="stac_item_source", value=stac_item_source)
+        # return result.success().variable_json(name="stac_item_source", value=stac_item_source)
+        return task.complete(global_variables={"stac_item_source": stac_item_source})
 
 
 class StacItemHandler(TaskHandler):
-    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
+    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
         """
         Publish STAC item to STAC API
 
@@ -298,14 +327,19 @@ class StacItemHandler(TaskHandler):
         Variables set:
             None
         """
-        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
+
+        log_context = {
+            "WORKER_ID": task.get_worker_id(),
+            "TASK_ID": task.get_task_id(),
+            "TOPIC_NAME": task.get_topic_name(),
+        }
 
         # Get and validate job variables
-        stac_item_source = job.get_variable("stac_item_source")
+        stac_item_source = task.get_variable("stac_item_source")
         if not stac_item_source:
             raise ValueError("Missing required variable: stac_item_source")
         stac_update_items = True
-        stac_update_items_param = job.get_variable("stac_update_items")
+        stac_update_items_param = task.get_variable("stac_update_items")
         if stac_update_items_param is not None:
             if isinstance(stac_update_items_param, str):
                 stac_update_items = stac_update_items_param.lower() == "true"
@@ -353,9 +387,9 @@ class StacItemHandler(TaskHandler):
                 # Handle S3
                 case s3_value if s3_value.startswith("s3://"):
                     # Get optional S3 variables
-                    s3_endpoint_url = job.get_variable("s3_endpoint_url")
-                    s3_access_key = job.get_variable("s3_access_key")
-                    s3_secret_key = job.get_variable("s3_secret_key")
+                    s3_endpoint_url = task.get_variable("s3_endpoint_url")
+                    s3_access_key = task.get_variable("s3_access_key")
+                    s3_secret_key = task.get_variable("s3_secret_key")
                     if not s3_endpoint_url or not s3_access_key or not s3_secret_key:
                         raise ValueError("Missing required S3 variables: s3_endpoint_url, s3_access_key, s3_secret_key")
 
@@ -368,14 +402,20 @@ class StacItemHandler(TaskHandler):
 
                 # Default
                 case _:
-                    log_with_context(
-                        f"Error loading collection: Could not handle source {stac_item_source}", log_context
+                    return task.failure(
+                        error_message="Error loading collection",
+                        error_details=f"Could not handle source {stac_item_source}",
+                        max_retries=0,
+                        retry_timeout=0,
                     )
-                    return result.failure()
 
         except Exception as e:
-            log_with_context(f"Error loading item: {str(e)}", log_context)
-            return result.failure()
+            return task.failure(
+                error_message="Error loading item",
+                error_details=str(e),
+                max_retries=3,
+                retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
+            )
 
         # Get token to access protected endpoints of catalog
         token = self.iam_client.get_access_token()
@@ -402,8 +442,12 @@ class StacItemHandler(TaskHandler):
                     + "To update this resource set process variable stac_update_items to true"
                 )
         except Exception as e:
-            log_with_context(f"Error publishing item: {str(e)}", log_context)
-            return result.failure()
+            return task.failure(
+                error_message=f"Error publishing item: {str(e)}",
+                error_details="",
+                max_retries=3,
+                retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
+            )
 
         log_with_context(f"Finished publishing item {item.id}", log_context)
-        return result.success()
+        return task.complete()

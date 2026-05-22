@@ -1,10 +1,14 @@
+from operaton.external_task.external_task import ExternalTask, TaskResult
+
 from worker.common.config import worker_config
 from worker.common.iam import IAMClient
 from worker.common.secrets import worker_secrets
-from worker.common.types import ExternalJob, JobResult, JobResultBuilder
 
 
 class TaskHandler:
+    TIMEOUT_1_MINUTE = 60000
+    TIMEOUT_5_MINUTES = 3000000
+
     def __init__(self, handlers_config: dict):
         self.log_context = {}
         handler_name = self.__class__.__name__
@@ -34,11 +38,8 @@ class TaskHandler:
             token_endpoint_url=iam_oidc_token_endpoint_url, client_id=iam_client_id, client_secret=iam_client_secret
         )
 
-    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
+    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
         raise NotImplementedError
-
-    def task_failure(self, error, error_msg, result, retries=3, timeout="PT10M") -> JobResult:
-        return result.failure().error_message(error).error_details(error_msg).retries(retries).retry_timeout(timeout)
 
     def get_config(self, key, default):
         return self.config_all.get(key, default)

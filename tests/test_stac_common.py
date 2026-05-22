@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from worker.common.resources.stac import validate_configured_prefix_rewrite, asset_hrefs_rewrite
+from worker.common.resources.stac import asset_hrefs_rewrite, validate_configured_prefix_rewrite
 
 
 @pytest.mark.parametrize(

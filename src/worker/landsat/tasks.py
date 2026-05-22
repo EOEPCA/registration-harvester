@@ -1,6 +1,8 @@
 import json
 import os
 
+from operaton.external_task.external_task import ExternalTask, TaskResult
+
 from worker.common.base.file import untar_file
 from worker.common.datasets import landsat
 from worker.common.log_utils import configure_logging, log_with_context
@@ -9,14 +11,13 @@ from worker.common.resources import stac
 from worker.common.search_interval import determine_search_interal
 from worker.common.secrets import worker_secrets
 from worker.common.task_handler import TaskHandler
-from worker.common.types import ExternalJob, JobResult, JobResultBuilder
 from worker.landsat.discovery import search
 
 configure_logging()
 
 
 class LandsatDiscoverHandler(TaskHandler):
-    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
+    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
         """
         Searches for new Landsat data
 
@@ -30,7 +31,12 @@ class LandsatDiscoverHandler(TaskHandler):
             scenes: List of scenes found
         """
 
-        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
+        log_context = {
+            "WORKER_ID": task.get_worker_id(),
+            "TASK_ID": task.get_task_id(),
+            "TOPIC_NAME": task.get_topic_name(),
+        }
+
         log_with_context("Discovering new Landsat data ...", log_context)
 
         # Configuration
@@ -38,10 +44,10 @@ class LandsatDiscoverHandler(TaskHandler):
         page_size = self.get_config("page_size", 100)
 
         # Process variables
-        param_collections = job.get_variable("collections")
-        param_datetime_interval = job.get_variable("datetime_interval")
-        param_bbox = job.get_variable("bbox")
-        param_query = job.get_variable("query")
+        param_collections = task.get_variable("collections")
+        param_datetime_interval = task.get_variable("datetime_interval")
+        param_bbox = task.get_variable("bbox")
+        param_query = task.get_variable("query")
 
         # Discover scenes
         collections = (
@@ -51,18 +57,20 @@ class LandsatDiscoverHandler(TaskHandler):
         query = json.loads(param_query) if param_query is not None and len(param_query) > 0 else None
 
         if collections is None:
-            error_message = "Process input variable 'collections' is mandatory and must have a non-empty value"
-            log_with_context(error_message, log_context, "error")
-            # return result.failure().error_message(error_message).retries(0).retry_timeout("PT10M")
-            return result.success().variable_json(name="scenes", value=[])
+            return task.failure(
+                error_message="Missing input variable",
+                error_details="Process input variable 'collections' is mandatory and must have a non-empty value",
+                max_retries=0,
+                retry_timeout=0,
+            )
 
         if param_datetime_interval is None and bbox is None and query is None:
-            error_message = (
-                "At least one of the input variables datetime_interval, bbox or query must be provided for discovery"
+            return task.failure(
+                error_message="Missing input variable",
+                error_details="At least one of the input variables datetime_interval, bbox or query must be provided for discovery",
+                max_retries=0,
+                retry_timeout=0,
             )
-            log_with_context(error_message, log_context, "error")
-            # return result.failure().error_message(error_message).retries(0).retry_timeout("PT10M")
-            return result.success().variable_json(name="scenes", value=[])
 
         log_with_context(f"Search parameter: collections={collections}", log_context)
         log_with_context(f"Search parameter: datetime_interval='{param_datetime_interval}'", log_context)
@@ -77,15 +85,18 @@ class LandsatDiscoverHandler(TaskHandler):
                 log_with_context(f"{idx} {api_url}/collections/{item['collection']}/items/{item['id']}", log_context)
 
         except Exception as e:
-            error_msg = repr(e)
-            log_with_context(error_msg, log_context)
-            return self.task_failure("Error searching scenes", error_msg, result, retries=3, timeout="PT20M")
+            return task.failure(
+                error_message="Error searching scenes",
+                error_details=repr(e),
+                max_retries=3,
+                retry_timeout=TaskHandler.TIMEOUT_5_MINUTES,
+            )
 
-        return result.success().variable_json(name="scenes", value=scenes)
+        return task.complete(global_variables={"scenes": scenes})
 
 
 class LandsatContinuousDiscoveryHandler(TaskHandler):
-    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
+    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
         """
         Searches for new Landsat data continuously
 
@@ -99,7 +110,11 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
             scenes: List of scenes found
         """
 
-        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
+        log_context = {
+            "WORKER_ID": task.get_worker_id(),
+            "TASK_ID": task.get_task_id(),
+            "TOPIC_NAME": task.get_topic_name(),
+        }
 
         if self.get_config("enabled", False):
             log_with_context("Continous discovery of new Landsat data ...", log_context)
@@ -117,7 +132,7 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
             # Create query for time window
             timewindow_hours = self.get_config("timewindow_hours", 1)
             datetime_property = self.get_config("datetime_property", "created")
-            start_time, end_time = determine_search_interal(job, timewindow_hours)
+            start_time, end_time = determine_search_interal(task, timewindow_hours)
             query = json.loads(json.dumps({datetime_property: {"gte": start_time, "lt": end_time}}))
 
             log_with_context(f"Search parameter: collections={collections}", log_context)
@@ -133,19 +148,22 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
                     )
 
             except Exception as e:
-                error_msg = repr(e)
-                log_with_context(error_msg, log_context)
-                return self.task_failure("Error in continous discovery", error_msg, result, retries=3, timeout="PT20M")
+                return task.failure(
+                    error_message="Error searching scenes",
+                    error_details=repr(e),
+                    max_retries=3,
+                    retry_timeout=TaskHandler.TIMEOUT_5_MINUTES,
+                )
 
         else:
             log_with_context("Continous discovery is disabled by configuration, skipping ...", log_context)
             scenes = []
 
-        return result.success().variable_json(name="scenes", value=scenes)
+        return task.complete(global_variables={"scenes": scenes})
 
 
 class LandsatGetDownloadUrlHandler(TaskHandler):
-    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
+    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
         """
         Get download urls for discovered scenes
 
@@ -157,10 +175,15 @@ class LandsatGetDownloadUrlHandler(TaskHandler):
             urls: List of download urls for scenes
         """
 
-        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
+        log_context = {
+            "WORKER_ID": task.get_worker_id(),
+            "TASK_ID": task.get_task_id(),
+            "TOPIC_NAME": task.get_topic_name(),
+        }
+
         log_with_context("Get download urls for discovered scenes ...", log_context)
 
-        scenes = job.get_variable("scenes")
+        scenes = task.get_variable("scenes")
         m2m_api_user = worker_secrets.get_secret("m2m_user", "")
         m2m_api_password = worker_secrets.get_secret("m2m_password", "")
         m2m_api_use_token = self.get_config("m2m_use_token", True)
@@ -170,19 +193,22 @@ class LandsatGetDownloadUrlHandler(TaskHandler):
             api_key = usgs.login(m2m_api_user, m2m_api_password, m2m_api_use_token, m2m_api_url)
             scenes = usgs.add_download_urls(scenes, api_key)
         except Exception as e:
-            error_msg = str(e)
-            log_with_context(error_msg, log_context)
-            return self.task_failure("Error getting download urls", error_msg, result, retries=3, timeout="PT20M")
+            return task.failure(
+                error_message="Error getting download urls",
+                error_details=str(e),
+                max_retries=3,
+                retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
+            )
 
         for idx, scene in enumerate(scenes, 1):
             log_with_context(f"{idx} id={scene['id']} collection={scene['collection']} url={scene['url']}", log_context)
             # log_with_context(json.dumps(scene))
 
-        return result.success().variable_json(name="scenes", value=scenes)
+        return task.complete(global_variables={"scenes": scenes})
 
 
 class LandsatDownloadHandler(TaskHandler):
-    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
+    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
         """
         Downloads a Landsat scene
 
@@ -195,16 +221,23 @@ class LandsatDownloadHandler(TaskHandler):
             tar_file = Path to the downloaded tar file
         """
 
-        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
+        log_context = {
+            "WORKER_ID": task.get_worker_id(),
+            "TASK_ID": task.get_task_id(),
+            "TOPIC_NAME": task.get_topic_name(),
+        }
 
-        scene = job.get_variable("scene")
+        scene = task.get_variable("scene")
         if "url" not in scene:
-            error_msg = "No URL available in scene variable"
-            log_with_context(error_msg, log_context)
-            return self.task_failure("Error Downloading Landsat scene", error_msg, result, retries=0)
+            return task.failure(
+                error_message="Error downloading scene",
+                error_details="No URL available in scene variable",
+                max_retries=0,
+                retry_timeout=0,
+            )
 
         download_url = scene["url"]
-        log_with_context("Downloading Landsat scene from URL %s" % (download_url), log_context)
+        log_with_context("Downloading scene from URL %s" % (download_url), log_context)
 
         base_dir = self.get_config("download_base_dir", "/tmp")
         download_timeout = self.get_config("download_timeout", 300)
@@ -216,27 +249,29 @@ class LandsatDownloadHandler(TaskHandler):
             log_with_context(f"Skipped download. File {file_path} already exists", log_context)
         else:
             try:
-                log_with_context(f"Downloading Landsat scene into directory {download_dir}", log_context)
+                log_with_context(f"Downloading scene into directory {download_dir}", log_context)
                 file_path = usgs.download_data(url=download_url, output_dir=download_dir, timeout=download_timeout)
             except Exception as e:
-                error_msg = repr(e)
-                log_with_context(error_msg, log_context)
-                return self.task_failure("Download failed", error_msg, result, retries=3, timeout="PT20M")
+                return task.failure(
+                    error_message="Download failed",
+                    error_details=repr(e),
+                    max_retries=3,
+                    retry_timeout=TaskHandler.TIMEOUT_5_MINUTES,
+                )
 
             if not isinstance(file_path, str) or not os.path.exists(file_path):
-                error_msg = f"Downloaded file {file_path} does not exists"
-                log_with_context(error_msg, log_context)
-                return self.task_failure("Download failed", error_msg, result, retries=3, timeout="PT20M")
+                return task.failure(
+                    error_message="Download failed",
+                    error_details=f"Downloaded file {file_path} does not exists",
+                    max_retries=3,
+                    retry_timeout=TaskHandler.TIMEOUT_5_MINUTES,
+                )
 
-        return (
-            result.success()
-            .variable_boolean(name="scene_downloaded", value=True)
-            .variable_string(name="tar_file", value=file_path)
-        )
+        return task.complete(global_variables={"scene_downloaded": True, "tar_file": file_path})
 
 
 class LandsatUntarHandler(TaskHandler):
-    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
+    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
         """
         Extracts the downloaded scene
 
@@ -247,33 +282,40 @@ class LandsatUntarHandler(TaskHandler):
             scene_path = Path to the untared scene folder
         """
 
-        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
-        tar_file = job.get_variable("tar_file")
+        log_context = {
+            "WORKER_ID": task.get_worker_id(),
+            "TASK_ID": task.get_task_id(),
+            "TOPIC_NAME": task.get_topic_name(),
+        }
+
+        tar_file = task.get_variable("tar_file")
         remove_tar = self.get_config("remove_tar", False)
         create_folder = self.get_config("create_folder", True)
         log_with_context(f"Untar downloaded scene {tar_file} ...", log_context)
 
         if not os.path.exists(tar_file):
-            error_msg = f"File does not exist: {tar_file}"
-            log_with_context(error_msg, log_context, "error")
-            return self.task_failure("Untar failed", error_msg, result, retries=0)
+            return task.failure(
+                error_message="Untar failed",
+                error_details=f"File does not exist: {tar_file}",
+                max_retries=0,
+                retry_timeout=0,
+            )
 
         try:
             scene_path, tar_file_removed = untar_file(tar_file, remove_tar=remove_tar, create_folder=create_folder)
         except Exception as e:
-            error_msg = str(e)
-            log_with_context(error_msg, log_context, "error")
-            return self.task_failure("Untar failed", error_msg, result, retries=0)
+            return task.failure(
+                error_message="Untar failed",
+                error_details=str(e),
+                max_retries=3,
+                retry_timeout=TaskHandler.TIMEOUT_5_MINUTES,
+            )
 
-        return (
-            result.success()
-            .variable_string(name="scene_path", value=scene_path)
-            .variable_boolean(name="tar_file_removed", value=tar_file_removed)
-        )
+        return task.complete(global_variables={"scene_path": scene_path, "tar_file_removed": tar_file_removed})
 
 
 class LandsatExtractMetadataHandler(TaskHandler):
-    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
+    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
         """
         Extract STAC metadata
 
@@ -285,29 +327,40 @@ class LandsatExtractMetadataHandler(TaskHandler):
             scene_stac_file = Path to the file containing the STAC item for this scene
         """
 
-        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
-        scene_path = job.get_variable("scene_path")
-        scene = job.get_variable("scene")
+        log_context = {
+            "WORKER_ID": task.get_worker_id(),
+            "TASK_ID": task.get_task_id(),
+            "TOPIC_NAME": task.get_topic_name(),
+        }
+
+        scene_path = task.get_variable("scene_path")
+        scene = task.get_variable("scene")
         log_with_context(f"Extracting metadata for {scene_path} ...", log_context)
 
         if not os.path.exists(scene_path):
-            error_msg = f"Scene folder does not exist: {scene_path}"
-            log_with_context(error_msg, log_context, "error")
-            return self.task_failure("Extracting metadata failed", error_msg, result, retries=0)
+            return task.failure(
+                error_message="Extracting metadata failed",
+                error_details=f"Scene folder does not exist: {scene_path}",
+                max_retries=0,
+                retry_timeout=0,
+            )
 
         try:
             stac_file = landsat.landsat_metadata(scene_path, scene["id"], False, True)
 
         except Exception as e:
-            error_msg = str(e)
-            log_with_context(error_msg, log_context, "error")
-            return self.task_failure("Extracting metadata failed", error_msg, result, retries=0)
+            return task.failure(
+                error_message="Extracting metadata failed",
+                error_details=str(e),
+                max_retries=0,
+                retry_timeout=0,
+            )
 
-        return result.success().variable_string(name="scene_stac_file", value=stac_file)
+        return task.complete(global_variables={"scene_stac_file": stac_file})
 
 
 class LandsatRegisterMetadataHandler(TaskHandler):
-    def execute(self, job: ExternalJob, result: JobResultBuilder, config: dict) -> JobResult:
+    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
         """
         Register metadata at catalog
 
@@ -318,9 +371,14 @@ class LandsatRegisterMetadataHandler(TaskHandler):
         Variables set:
         """
 
-        log_context = {"JOB": job.id, "BPMN_TASK": job.element_name}
-        scene = job.get_variable("scene")
-        scene_stac_file = job.get_variable("scene_stac_file")
+        log_context = {
+            "WORKER_ID": task.get_worker_id(),
+            "TASK_ID": task.get_task_id(),
+            "TOPIC_NAME": task.get_topic_name(),
+        }
+
+        scene = task.get_variable("scene")
+        scene_stac_file = task.get_variable("scene_stac_file")
         log_with_context(f"Register metadata for item {scene['id']} and stac file {scene_stac_file} ...", log_context)
         # log_with_context(json.dumps(scene))
 
@@ -336,8 +394,11 @@ class LandsatRegisterMetadataHandler(TaskHandler):
         # validate input
         vars_not_set = self.validate([scene, scene_stac_file, api_url])
         if len(vars_not_set) > 0:
-            return self.task_failure(
-                "Job input validation failed", f"Variables {vars_not_set} must not be empty", result, retries=0
+            return task.failure(
+                error_message="Missing input variable",
+                error_details=f"Variables {vars_not_set} must not be empty",
+                max_retries=0,
+                retry_timeout=0,
             )
 
         # Get token to access protected endpoints of catalog
@@ -356,12 +417,15 @@ class LandsatRegisterMetadataHandler(TaskHandler):
                 rewrite_asset_hrefs=rewrite_asset_hrefs,
             )
         except Exception as e:
-            error_msg = str(e)
-            log_with_context(error_msg, log_context, "error")
-            return self.task_failure("Register metadata error", error_msg, result)
+            return task.failure(
+                error_message="Error register metadata",
+                error_details=str(e),
+                max_retries=0,
+                retry_timeout=TaskHandler.TIMEOUT_5_MINUTES,
+            )
 
         log_with_context("Finished.", log_context)
-        return result.success()
+        return task.complete()
 
     def validate(self, job_vars: list):
         return list(filter(lambda v: v is None, job_vars))

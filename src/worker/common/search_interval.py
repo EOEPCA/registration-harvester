@@ -1,13 +1,17 @@
 import datetime
 
 from dateutil.parser import parse
+from operaton.client.engine_client import EngineClient
+from operaton.external_task.external_task import ExternalTask
 
-from worker.common.client import flowable_client
-from worker.common.types import ExternalJob
+from worker.common.config import worker_config
 
 
-def determine_search_interal(job: ExternalJob, timedelta_hours: float) -> tuple[str, str]:
-    history = flowable_client.get_process_instance_history(job.process_instance_id)
+def determine_search_interal(task: ExternalTask, timedelta_hours: float) -> tuple[str, str]:
+    engine_config = worker_config.get("bpm_engine")
+    client = EngineClient(engine_base_url=engine_config.get("url"), config=engine_config)
+    # TODO Add get_process_instance_history to operaton external task client
+    history = client.get_process_instance_history(task.get_process_instance_id())
     if "startTime" in history:
         current_time = parse(history["startTime"])
     else:

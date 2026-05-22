@@ -35,18 +35,15 @@ The EOEPCA+ Registration Harvester is a component of the [Resource Registration]
 
 The functionality of the harvester is implemented by workflows which are defined as [BPMN](https://www.bpmn.org/) processes in the `workflows` directory. 
 
-The runtime orchestration of the workflows is done by the open-source [Flowable](https://www.flowable.com/open-source) process automation platform.
-
-The implementation of the individual workflow tasks is provided by the `worker` package, utilizing the [EOEPCA+ Registration Library](https://eoepca.readthedocs.io/projects/resource-registration/en/latest/design/common-library/design/).
+The runtime orchestration of the workflows is done by the open-source [Operaton](https://operaton.org/) process automation platform.
 
 
 ### Built With
 
 - [Python](https://www.python.org/)
-- [Flowable](https://www.flowable.com/open-source)
 - [FastAPI](https://fastapi.tiangolo.com/)
-- [EOEPCA+ Registration Library](https://github.com/EOEPCA/resource-registration/tree/main/lib)
-- [Flowable External Client Python](https://github.com/EOEPCA/eoepca-flowable-external-client-python)
+- [eodm - EO Data Mover](https://github.com/geopython/eodm)
+- [Operaton External Client](https://github.com/DLR-terrabyte/operaton-external-task-client-python3)
 
 
 ## Getting Started
