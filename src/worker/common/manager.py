@@ -29,7 +29,7 @@ class SubscriptionManager:
             "lockDuration": engine_config.get("lock_duration", 300000),
             "retries": engine_config.get("retries", 3),
             "retryTimeout": engine_config.get("retry_timeout", 30000),
-            "isDebug": worker_config.get("is_debug", False),
+            "isDebug": worker_config.get_all().get("is_debug", False),
             "asyncResponseTimeout": engine_config.get("async_response_timeout", 120000),
             "sleepSeconds": engine_config.get("sleep_seconds", 15),
             "httpTimeoutMillis": engine_config.get("http_timeout_millis", 420000),
@@ -71,7 +71,7 @@ class SubscriptionManager:
                         base_url=task_config["base_url"],
                         worker_id=worker_id,
                         config=task_config,
-                        log_level=worker_config.get("log_level", "INFO"),
+                        log_level=worker_config.get_all().get("log_level", "INFO"),
                     )
                     executor.submit(
                         external_task_worker.subscribe,
