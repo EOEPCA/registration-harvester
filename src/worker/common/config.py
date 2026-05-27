@@ -10,8 +10,7 @@ class WorkerConfig:
         config_path_default = Path(__file__).parent.parent.parent.parent / "config.yaml"
         config_path = os.environ.get("CONFIG_FILE_PATH", config_path_default)
         with open(config_path) as f:
-            config_all = yaml.safe_load(f)
-            self.config_worker = config_all["worker"]
+            self.config_worker = yaml.safe_load(f)
 
     def get_all(self) -> dict:
         return self.config_worker

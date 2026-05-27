@@ -1,45 +1,37 @@
 services:
-    flowable-rest:
-        image: flowable/flowable-rest:7.1.0
-        container_name: flowable-rest
-        depends_on:
-            - flowable-postgres
+    operaton:
+        image: operaton/operaton:1.1.1
+        container_name: operaton
         environment:
-            - SERVER_PORT=8080
-            - SPRING_DATASOURCE_DRIVER-CLASS-NAME=org.postgresql.Driver
-            - SPRING_DATASOURCE_URL=jdbc:postgresql://flowable-postgres:5432/flowable
-            - SPRING_DATASOURCE_USERNAME=flowable
-            - SPRING_DATASOURCE_PASSWORD=flowable
-            - FLOWABLE_REST_APP_ADMIN_USER-ID=eoepca
-            - FLOWABLE_REST_APP_ADMIN_PASSWORD=eoepca
-            - FLOWABLE_COMMON_APP_IDM-ADMIN_USER=admin
-            - FLOWABLE_COMMON_APP_IDM-ADMIN_PASSWORD=test
-            - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB=INFO
-            - LOGGING_LEVEL_ORG_FLOWABLE=INFO
-            - LOGGING_LEVEL_ORG_FLOWABLE_JOB_SERVICE=INFO
-            - FLOWABLE_REST_APP_AUTHENTICATION-MODE=any-user
-            - FLOWABLE_REST_APP_CREATE-DEMO-DEFINITIONS=false
-            - FLOWABLE_REST_APP_CORS_ENABLED=true
-            - FLOWABLE_REST_APP_CORS_ALLOWED-ORIGINS=*
+            - DB_DRIVER=org.postgresql.Driver
+            - DB_URL=jdbc:postgresql://postgres:5432/operaton
+            - DB_USERNAME=postgres
+            - DB_PASSWORD=postgrespassword
+            - MANAGEMENT_ENDPOINT_PROMETHEUS_ENABLED=true
+            - MANAGEMENT_ENDPOINT_INFO_ENABLED=true
+            - OPERATON_BPM_AUTO-DEPLOYMENT-ENABLED=false
+            - OPERATON_BPM_HISTORY-LEVEL=ACTIVITY
+            - OPERATON_BPM_ADMIN-USER_ID=eoepca
+            - OPERATON_BPM_ADMIN-USER_PASSWORD=eoepca
         ports:
-            - 8082:8080
-        entrypoint: ["./wait-for-something.sh", "flowable-postgres", "5432", "PostgreSQL", "/flowable-entrypoint.sh"]
+        - "9090:8080"
         networks:
-            - flowable-network
+            - operaton-network
+        depends_on:
+            - postgres
         restart: always
 
-    flowable-postgres:
-        image: postgres:13
-        container_name: flowable-postgres
+    postgres:
+        image: postgres:15
+        container_name: postgres
         environment:
-            - POSTGRES_PASSWORD=flowable
-            - POSTGRES_USER=flowable
-            - POSTGRES_DB=flowable
-        ports:
-            - 5434:5432
-        command: postgres
+            - POSTGRES_DB=operaton
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgrespassword
+        volumes:
+            - postgres-data:/var/lib/postgresql/data
         networks:
-            - flowable-network
+            - operaton-network
         restart: always
 
     harvester-worker-landsat:
@@ -49,8 +41,8 @@ services:
             - "8081:8080"
         environment:
             - CONFIG_FILE_PATH=/worker/config/harvester.yaml
-            - FLOWABLE_USER=${FLOWABLE_USER}
-            - FLOWABLE_PASSWORD=${FLOWABLE_PASSWORD}
+            - OPERATON_REST_USER=${OPERATON_REST_USER}
+            - OPERATON_REST_PASSWORD=${OPERATON_REST_PASSWORD}
             - M2M_USER=${M2M_USER}
             - M2M_PASSWORD=${M2M_PASSWORD}
             - IAM_CLIENT_ID=${IAM_CLIENT_ID}
@@ -67,8 +59,8 @@ services:
             - "8082:8080"
         environment:
             - CONFIG_FILE_PATH=/worker/config/harvester.yaml
-            - FLOWABLE_USER=${FLOWABLE_USER}
-            - FLOWABLE_PASSWORD=${FLOWABLE_PASSWORD}
+            - OPERATON_REST_USER=${OPERATON_REST_USER}
+            - OPERATON_REST_PASSWORD=${OPERATON_REST_PASSWORD}
             - CDSE_USER=${CDSE_USER}
             - CDSE_PASSWORD=${CDSE_PASSWORD}
             - IAM_CLIENT_ID=${IAM_CLIENT_ID}
@@ -85,8 +77,8 @@ services:
             - "8083:8080"
         environment:
             - CONFIG_FILE_PATH=/worker/config/harvester.yaml
-            - FLOWABLE_USER=${FLOWABLE_USER}
-            - FLOWABLE_PASSWORD=${FLOWABLE_PASSWORD}
+            - OPERATON_REST_USER=${OPERATON_REST_USER}
+            - OPERATON_REST_PASSWORD=${OPERATON_REST_PASSWORD}
             - IAM_CLIENT_ID=${IAM_CLIENT_ID}
             - IAM_CLIENT_SECRET=${IAM_CLIENT_SECRET}
         volumes:
@@ -100,12 +92,16 @@ services:
             - "8083:8080"
         environment:
             - CONFIG_FILE_PATH=/worker/config/harvester.yaml
-            - FLOWABLE_USER=${FLOWABLE_USER}
-            - FLOWABLE_PASSWORD=${FLOWABLE_PASSWORD}
+            - OPERATON_REST_USER=${OPERATON_REST_USER}
+            - OPERATON_REST_PASSWORD=${OPERATON_REST_PASSWORD}
         volumes:
             - ./config-tutorial.yaml:/worker/config/harvester.yaml:ro
         restart: always                
 
 networks:
-  flowable-network:
+  operaton-network:
     driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local

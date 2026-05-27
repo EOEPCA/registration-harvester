@@ -134,4 +134,7 @@ venv
 # IDE
 .vscode
 
+# Custom
 .local
+**/*.pem
+config.yaml

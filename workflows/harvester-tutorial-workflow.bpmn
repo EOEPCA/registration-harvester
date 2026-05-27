@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1ew6xym" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.20.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.20.0">
+  <bpmn:collaboration id="Collaboration_18aeu4b">
+    <bpmn:participant id="Pool_1" name="Harvester Tutorial Workflow" processRef="harvester-tutorial-workflow" />
+  </bpmn:collaboration>
+  <bpmn:process id="harvester-tutorial-workflow" name="Harvester Tutorial Workflow" isExecutable="true" camunda:historyTimeToLive="1">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_0vhy3j0</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="tutorial_discover_items" name="Discover STAC Items" camunda:asyncAfter="true" camunda:type="external" camunda:topic="tutorial_discover_items">
+      <bpmn:incoming>Flow_0vhy3j0</bpmn:incoming>
+      <bpmn:outgoing>Flow_1in26fb</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="Event_12nt1d7">
+      <bpmn:incoming>Flow_0rj5gas</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0vhy3j0" sourceRef="StartEvent_1" targetRef="tutorial_discover_items" />
+    <bpmn:sequenceFlow id="Flow_1in26fb" name="for each item" sourceRef="tutorial_discover_items" targetRef="tutorial_process_item" />
+    <bpmn:sequenceFlow id="Flow_0rj5gas" sourceRef="tutorial_process_item" targetRef="Event_12nt1d7" />
+    <bpmn:serviceTask id="tutorial_process_item" name="Process STAC Item" camunda:type="external" camunda:topic="tutorial_process_item">
+      <bpmn:incoming>Flow_1in26fb</bpmn:incoming>
+      <bpmn:outgoing>Flow_0rj5gas</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics camunda:asyncAfter="true" camunda:collection="${items.elements()}" camunda:elementVariable="item" />
+    </bpmn:serviceTask>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_18aeu4b">
+      <bpmndi:BPMNShape id="Participant_03a7nr2_di" bpmnElement="Pool_1" isHorizontal="true">
+        <dc:Bounds x="160" y="100" width="680" height="250" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="252" y="212" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_10y1bqf_di" bpmnElement="tutorial_discover_items">
+        <dc:Bounds x="340" y="190" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_12nt1d7_di" bpmnElement="Event_12nt1d7">
+        <dc:Bounds x="722" y="212" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0r5yssc_di" bpmnElement="tutorial_process_item">
+        <dc:Bounds x="560" y="190" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0vhy3j0_di" bpmnElement="Flow_0vhy3j0">
+        <di:waypoint x="288" y="230" />
+        <di:waypoint x="340" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1in26fb_di" bpmnElement="Flow_1in26fb">
+        <di:waypoint x="440" y="230" />
+        <di:waypoint x="560" y="230" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="472" y="212" width="64" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0rj5gas_di" bpmnElement="Flow_0rj5gas">
+        <di:waypoint x="660" y="230" />
+        <di:waypoint x="722" y="230" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
