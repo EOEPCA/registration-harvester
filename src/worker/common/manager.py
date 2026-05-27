@@ -71,7 +71,6 @@ class SubscriptionManager:
                         base_url=task_config["base_url"],
                         worker_id=worker_id,
                         config=task_config,
-                        log_level=worker_config.get_all().get("log_level", "INFO"),
                     )
                     executor.submit(
                         external_task_worker.subscribe,
