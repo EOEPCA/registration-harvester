@@ -422,7 +422,7 @@ class SentinelExtractMetadataHandler(TaskHandler):
         if not scene_folder or not os.path.exists(scene_folder) or not scene_id or not scene:
             return task.failure(
                 error_message="Missing or invalid inputs",
-                error_details=f"The variables scene_folder, scene_id or scene are missing or path {scene_folder} does not exist",
+                error_details=f"scene_folder, scene_id or scene are missing or {scene_folder} does not exist",
                 max_retries=0,
                 retry_timeout=0,
             )

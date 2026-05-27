@@ -67,7 +67,7 @@ class LandsatDiscoverHandler(TaskHandler):
         if param_datetime_interval is None and bbox is None and query is None:
             return task.failure(
                 error_message="Missing input variable",
-                error_details="At least one of the input variables datetime_interval, bbox or query must be provided for discovery",
+                error_details="One of the input variables datetime_interval, bbox or query must be provided",
                 max_retries=0,
                 retry_timeout=0,
             )
