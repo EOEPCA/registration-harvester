@@ -4,7 +4,7 @@ bpm_engine:
   lock_duration: 300000  # 5 minutes
   retries: 3
   retry_timeout: 30000  # 30 seconds
-  async_response_timeout: 120000 # 2 minutes
+  async_response_timeout: 30000 # 30 seconds
   timeout_delta_millis: 300000 # 5 minutes
   sleep_seconds: 15
   http_timeout_millis: 420000 # 7 minutes

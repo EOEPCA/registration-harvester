@@ -28,8 +28,8 @@ class SubscriptionManager:
             "lockDuration": engine_config.get("lock_duration", 300000),
             "retries": engine_config.get("retries", 3),
             "retryTimeout": engine_config.get("retry_timeout", 30000),
-            "isDebug": worker_config.get_all().get("is_debug", True),
-            "asyncResponseTimeout": engine_config.get("async_response_timeout", 120000),
+            "isDebug": worker_config.get_all().get("is_debug", False),
+            "asyncResponseTimeout": engine_config.get("async_response_timeout", 30000),
             "sleepSeconds": engine_config.get("sleep_seconds", 15),
             "httpTimeoutMillis": engine_config.get("http_timeout_millis", 420000),
             "timeoutDeltaMillis": engine_config.get("timeout_delta_millis", 300000),
@@ -63,12 +63,9 @@ class SubscriptionManager:
                 process_variables = topic_config.get("process_variables")
                 num_workers = topic_config.get("workers", 1)
 
-                logger.info(f"num_workers {num_workers}")
-
                 # Create worker for topic
                 for index in range(0, num_workers):
                     worker_id = f"worker_{socket.gethostname()}_{topic}_{index}"
-                    logger.info(f"worker_id {worker_id}")
                     external_task_worker = ExternalTaskWorker(
                         base_url=task_config["base_url"],
                         worker_id=worker_id,
