@@ -18,7 +18,7 @@ configure_logging()
 
 
 class StacCatalogHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Load STAC catalog and extract collection paths
 
@@ -66,11 +66,11 @@ class StacCatalogHandler(TaskHandler):
                     try:
                         # Handle STAC APIs
                         StacIO.set_default(FSSpecStacIO)
-                        stac_collection_source = []
+                        collections = []
                         for collection in extract_stac_api_collections(stac_catalog_source):
                             if collection.id in collections_to_harvest:
                                 log_with_context(f"Processing collection {collection.id}", log_context)
-                                stac_collection_source.append(collection.get_self_href())
+                                collections.append(collection.get_self_href())
                             else:
                                 log_with_context(f"Ignoring collection {collection.id}", log_context)
 
@@ -87,17 +87,13 @@ class StacCatalogHandler(TaskHandler):
                     except Exception:
                         StacIO.set_default(FSSpecStacIO)
                         catalog = Catalog.from_file(stac_catalog_source)
-                        stac_collection_source = [
-                            collection.get_self_href() for collection in catalog.get_all_collections()
-                        ]
+                        collections = [collection.get_self_href() for collection in catalog.get_all_collections()]
 
                 # Handle local files paths (or any other non‑URL string)
                 case file_value if file_value.startswith("/"):
                     StacIO.set_default(FSSpecStacIO)
                     catalog = Catalog.from_file(stac_catalog_source)
-                    stac_collection_source = [
-                        collection.get_self_href() for collection in catalog.get_all_collections()
-                    ]
+                    collections = [collection.get_self_href() for collection in catalog.get_all_collections()]
 
                 # Handle S3
                 case s3_value if s3_value.startswith("s3://"):
@@ -114,9 +110,7 @@ class StacCatalogHandler(TaskHandler):
                     StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
 
                     catalog = Catalog.from_file(stac_catalog_source)
-                    stac_collection_source = [
-                        collection.get_self_href() for collection in catalog.get_all_collections()
-                    ]
+                    collections = [collection.get_self_href() for collection in catalog.get_all_collections()]
 
                 # Default
                 case _:
@@ -135,14 +129,12 @@ class StacCatalogHandler(TaskHandler):
                 retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
             )
 
-        log_with_context(
-            f"Loaded catalog. Starting {len(stac_collection_source)} StacCollectionHandler tasks.", log_context
-        )
-        return task.complete(global_variables={"stac_collection_source": stac_collection_source})
+        log_with_context(f"Loaded catalog. Starting {len(collections)} StacCollectionHandler tasks.", log_context)
+        return task.complete(global_variables={"collections": collections})
 
 
 class StacCollectionHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Publish STAC collection to STAC API
 
@@ -163,9 +155,9 @@ class StacCollectionHandler(TaskHandler):
         }
 
         # Get and validate job variables
-        stac_collection_source = task.get_variable("stac_collection_source")
-        if not stac_collection_source:
-            raise ValueError("Missing required variable: stac_collection_source")
+        collection_param = task.get_variable("collection")
+        if not collection_param:
+            raise ValueError("Missing required variable: collection")
         stac_update_collections = True
         stac_update_collections_param = task.get_variable("stac_update_collections")
         if stac_update_collections_param is not None:
@@ -175,7 +167,10 @@ class StacCollectionHandler(TaskHandler):
                 stac_update_collections = stac_update_collections_param
 
         # Get and validate required configuration values
-        url = self.get_config("stac_api_url", "")
+        url = str(self.get_config("stac_api_url", ""))
+        if url.endswith("/"):
+            url = url[:-1]
+
         auth = (self.get_config("stac_api_user", None), self.get_config("stac_api_pw", None))
         if not url:
             raise ValueError("Missing required configuration: stac_api_url")
@@ -183,16 +178,16 @@ class StacCollectionHandler(TaskHandler):
             auth = None
 
         # List of all collection items to load
-        stac_item_source = []
+        items = []
 
         # Retrieve collection
         try:
-            log_with_context(f"Loading STAC collection from: {stac_collection_source}", log_context)
-            match stac_collection_source:
+            log_with_context(f"Loading STAC collection from: {collection_param}", log_context)
+            match collection_param:
                 # HTTP/HTTPS URLs - try STAC API first, fall back to plain HTTP/HTTPS
                 case url_value if url_value.startswith(("http://", "https://")):
                     try:
-                        parsed = urlparse(stac_collection_source)
+                        parsed = urlparse(collection_param)
                         comps = parsed.path.strip("/").split("/")
 
                         if len(comps) < 2:
@@ -227,18 +222,18 @@ class StacCollectionHandler(TaskHandler):
                             max_items=1000,
                             sortby="+datetime",
                         )
-                        stac_item_source = [item.get_self_href() for item in search.items()]
+                        items = [item.get_self_href() for item in search.items()]
 
                     except Exception:
                         StacIO.set_default(FSSpecStacIO)
-                        collection = Collection.from_file(stac_collection_source)
-                        stac_item_source = [item.get_self_href() for item in collection.get_all_items()]
+                        collection = Collection.from_file(collection_param)
+                        items = [item.get_self_href() for item in collection.get_all_items()]
 
                 # Handle local files paths (or any other non‑URL string)
                 case file_value if file_value.startswith("/"):
                     StacIO.set_default(FSSpecStacIO)
-                    collection = Collection.from_file(stac_collection_source)
-                    stac_item_source = [item.get_self_href() for item in collection.get_all_items()]
+                    collection = Collection.from_file(collection_param)
+                    items = [item.get_self_href() for item in collection.get_all_items()]
 
                 # Handle S3
                 case s3_value if s3_value.startswith("s3://"):
@@ -254,14 +249,14 @@ class StacCollectionHandler(TaskHandler):
                     )
                     StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
 
-                    collection = Collection.from_file(stac_collection_source)
-                    stac_item_source = [item.get_self_href() for item in collection.get_all_items()]
+                    collection = Collection.from_file(collection_param)
+                    items = [item.get_self_href() for item in collection.get_all_items()]
 
                 # Default
                 case _:
                     return task.failure(
                         error_message="Error loading collection",
-                        error_details=f"Could not handle source {stac_collection_source}",
+                        error_details=f"Could not handle source {collection_param}",
                         max_retries=3,
                         retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
                     )
@@ -292,11 +287,18 @@ class StacCollectionHandler(TaskHandler):
                 url = os.path.join(url, "collections", collection_loaded.id)
                 log_with_context(f"Successfully published collection at {url}", log_context)
         except HTTPStatusError as e:
+            error = str(e)
             if e.response.status_code == 409:
-                log_with_context(
+                error = (
                     f"Collection {collection.id} already exists. "
                     + "To update this resource set process variable stac_update_collections to true"
                 )
+            return task.failure(
+                error_message="Error publishing item",
+                error_details=error,
+                max_retries=3,
+                retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
+            )
         except Exception as e:
             return task.failure(
                 error_message="Error publishing collection",
@@ -306,15 +308,15 @@ class StacCollectionHandler(TaskHandler):
             )
 
         log_with_context(
-            f"Published collection {collection.id}. Starting {len(stac_item_source)} StacItemHandler tasks.",
+            f"Published collection {collection.id}. Starting {len(items)} StacItemHandler tasks.",
             log_context,
         )
         # return result.success().variable_json(name="stac_item_source", value=stac_item_source)
-        return task.complete(global_variables={"stac_item_source": stac_item_source})
+        return task.complete(global_variables={"items": items})
 
 
 class StacItemHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Publish STAC item to STAC API
 
@@ -335,9 +337,9 @@ class StacItemHandler(TaskHandler):
         }
 
         # Get and validate job variables
-        stac_item_source = task.get_variable("stac_item_source")
-        if not stac_item_source:
-            raise ValueError("Missing required variable: stac_item_source")
+        item_param = task.get_variable("item")
+        if not item_param:
+            raise ValueError("Missing required variable: item")
         stac_update_items = True
         stac_update_items_param = task.get_variable("stac_update_items")
         if stac_update_items_param is not None:
@@ -347,7 +349,10 @@ class StacItemHandler(TaskHandler):
                 stac_update_items = stac_update_items_param
 
         # Get and validate required configuration values
-        url = self.get_config("stac_api_url", "")
+        url = str(self.get_config("stac_api_url", ""))
+        if url.endswith("/"):
+            url = url[:-1]
+
         auth = (self.get_config("stac_api_user", None), self.get_config("stac_api_pw", None))
         if not url:
             raise ValueError("Missing required configuration: stac_api_url")
@@ -356,12 +361,12 @@ class StacItemHandler(TaskHandler):
 
         # Retrieve item
         try:
-            log_with_context(f"Loading STAC item from: {stac_item_source}", log_context)
-            match stac_item_source:
+            log_with_context(f"Loading STAC item from: {item_param}", log_context)
+            match item_param:
                 # HTTP/HTTPS URLs - try STAC API first, fall back to plain HTTP/HTTPS
                 case url_value if url_value.startswith(("http://", "https://")):
                     try:
-                        parsed = urlparse(stac_item_source)
+                        parsed = urlparse(item_param)
                         comps = parsed.path.strip("/").split("/")
 
                         if len(comps) < 2:
@@ -377,12 +382,12 @@ class StacItemHandler(TaskHandler):
                         item = [item for item in search.items()][0]
                     except Exception:
                         StacIO.set_default(FSSpecStacIO)
-                        item = Item.from_file(stac_item_source)
+                        item = Item.from_file(item_param)
 
                 # Handle local files paths (or any other non‑URL string)
                 case file_value if file_value.startswith("/"):
                     StacIO.set_default(FSSpecStacIO)
-                    item = Item.from_file(stac_item_source)
+                    item = Item.from_file(item_param)
 
                 # Handle S3
                 case s3_value if s3_value.startswith("s3://"):
@@ -398,13 +403,13 @@ class StacItemHandler(TaskHandler):
                     )
                     StacIO.set_default(lambda: FSSpecStacIO(filesystem=fs))
 
-                    item = Item.from_file(stac_item_source)
+                    item = Item.from_file(item_param)
 
                 # Default
                 case _:
                     return task.failure(
                         error_message="Error loading collection",
-                        error_details=f"Could not handle source {stac_item_source}",
+                        error_details=f"Could not handle item {item_param}",
                         max_retries=0,
                         retry_timeout=0,
                     )
@@ -436,15 +441,22 @@ class StacItemHandler(TaskHandler):
                 log_with_context(f"Successfully published item at {url}", log_context)
 
         except HTTPStatusError as e:
+            error = str(e)
             if e.response.status_code == 409:
-                log_with_context(
+                error = (
                     f"Item {item.id} already exists. "
                     + "To update this resource set process variable stac_update_items to true"
                 )
+            return task.failure(
+                error_message="Error publishing item",
+                error_details=error,
+                max_retries=3,
+                retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
+            )
         except Exception as e:
             return task.failure(
-                error_message=f"Error publishing item: {str(e)}",
-                error_details="",
+                error_message="Error publishing item",
+                error_details=str(e),
                 max_retries=3,
                 retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
             )

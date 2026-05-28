@@ -7,7 +7,7 @@ from worker.common.task_handler import TaskHandler
 
 
 class TutorialDiscoverItemsTaskHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         log_context = {
             "WORKER_ID": task.get_worker_id(),
             "TASK_ID": task.get_task_id(),
@@ -42,7 +42,7 @@ class TutorialDiscoverItemsTaskHandler(TaskHandler):
 
 
 class TutorialProcessItemTaskHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         log_context = {
             "WORKER_ID": task.get_worker_id(),
             "TASK_ID": task.get_task_id(),

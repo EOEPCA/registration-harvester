@@ -2,7 +2,6 @@ import importlib
 import logging
 import socket
 from concurrent.futures.thread import ThreadPoolExecutor
-from datetime import datetime
 
 from operaton.external_task.external_task_worker import ExternalTaskWorker
 
@@ -29,7 +28,7 @@ class SubscriptionManager:
             "lockDuration": engine_config.get("lock_duration", 300000),
             "retries": engine_config.get("retries", 3),
             "retryTimeout": engine_config.get("retry_timeout", 30000),
-            "isDebug": worker_config.get_all().get("is_debug", False),
+            "isDebug": worker_config.get_all().get("is_debug", True),
             "asyncResponseTimeout": engine_config.get("async_response_timeout", 120000),
             "sleepSeconds": engine_config.get("sleep_seconds", 15),
             "httpTimeoutMillis": engine_config.get("http_timeout_millis", 420000),
@@ -40,8 +39,9 @@ class SubscriptionManager:
             },
         }
 
-        # Overall number of needed worker threads
+        # Total number of needed worker threads
         num_workers_total = sum(topic.get("workers", 1) for _, topic in worker_config.get("topics").items())
+        logger.info(f"Total number of needed worker threads: {num_workers_total}")
 
         # Subscribe
         with ThreadPoolExecutor(max_workers=num_workers_total) as executor:
@@ -63,10 +63,12 @@ class SubscriptionManager:
                 process_variables = topic_config.get("process_variables")
                 num_workers = topic_config.get("workers", 1)
 
+                logger.info(f"num_workers {num_workers}")
+
                 # Create worker for topic
-                now = datetime.now()
                 for index in range(0, num_workers):
                     worker_id = f"worker_{socket.gethostname()}_{topic}_{index}"
+                    logger.info(f"worker_id {worker_id}")
                     external_task_worker = ExternalTaskWorker(
                         base_url=task_config["base_url"],
                         worker_id=worker_id,
@@ -79,12 +81,11 @@ class SubscriptionManager:
                         process_variables=process_variables,
                     )
                     # Save worker and its config
-                    self.exernal_task_worker[topic][worker_id] = {
-                        "worker": external_task_worker,
-                        "jobs_completed": 0,
-                        "start_time": now.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                        "settings": task_config,
-                    }
+                    # self.exernal_task_worker[topic][worker_id] = {
+                    #    "jobs_completed": 0,
+                    #    "start_time": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                    #    "settings": task_config,
+                    # }
                     logger.info(f"Successfully subscribed worker {worker_id} to topic {topic}")
 
     def subscriptions_info(self):

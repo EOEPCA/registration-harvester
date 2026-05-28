@@ -28,7 +28,7 @@
       <bpmn:extensionElements>
         <camunda:in source="scene" target="scene" />
       </bpmn:extensionElements>
-      <bpmn:multiInstanceLoopCharacteristics camunda:asyncAfter="true" camunda:collection="${scenes.elements()}" camunda:elementVariable="scene" />
+      <bpmn:multiInstanceLoopCharacteristics camunda:asyncAfter="true" camunda:collection="${scenes}" camunda:elementVariable="scene" />
     </bpmn:callActivity>
     <bpmn:serviceTask id="landsat_get_download_urls" name="Get Download URLs" camunda:asyncAfter="true" camunda:type="external" camunda:topic="landsat_get_download_urls" />
     <bpmn:serviceTask id="landsat_continuous_discovery" name="Continuous Discovery" camunda:asyncAfter="true" camunda:type="external" camunda:topic="landsat_continuous_discovery">

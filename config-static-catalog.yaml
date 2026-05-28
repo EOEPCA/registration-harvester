@@ -1,8 +1,6 @@
 log_level: INFO
 bpm_engine:
   url: https://registration-harvester-bpm-engine.develop.eoepca.org/engine-rest
-  tls: true
-  cacert: ./etc/eoepca-ca-chain.pem
   lock_duration: 300000  # 5 minutes
   retries: 3
   retry_timeout: 30000  # 30 seconds
@@ -13,21 +11,21 @@ bpm_engine:
 iam:
   oidc_token_endpoint_url: https://iam-auth.develop.eoepca.org/realms/eoepca/protocol/openid-connect/token
 topics:
-  stac_publish_catalog:
+  stac_harvest_catalog:
     module: worker.stac.tasks
     handler: StacCatalogHandler
     lock_duration: 6000000   # 10 minutes
     workers: 1
     parallel_tasks: 1
     retries: 5
-  stac_publish_collection:
+  stac_harvest_collection:
     module: worker.stac.tasks
     handler: StacCollectionHandler
     lock_duration: 6000000   # 10 minutes
     workers: 1
     parallel_tasks: 1
     retries: 5
-  stac_publish_item:
+  stac_harvest_item:
     module: worker.stac.tasks
     handler: StacItemHandler
     lock_duration: 6000000   # 10 minutes

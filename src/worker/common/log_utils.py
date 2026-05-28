@@ -5,7 +5,7 @@ from worker.common.config import worker_config
 
 def configure_logging():
     logging.basicConfig(
-        level=__get_log_level(worker_config.get("log_level")),
+        level=__get_log_level(worker_config.get_all().get("log_level", "INFO")),
         format="%(asctime)s.%(msecs)03d [%(levelname)s] [%(thread)d] %(message)s",
         handlers=[logging.StreamHandler()],
         datefmt="%Y-%m-%dT%H:%M:%S",

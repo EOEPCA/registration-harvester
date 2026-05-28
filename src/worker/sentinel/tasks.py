@@ -18,7 +18,7 @@ configure_logging()
 
 
 class SentinelDiscoverHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Searches for new Sentinel data
 
@@ -76,7 +76,7 @@ class SentinelDiscoverHandler(TaskHandler):
 
 
 class SentinelContinuousDiscoveryHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Searches for new Sentinel data continuously
 
@@ -140,7 +140,7 @@ class SentinelContinuousDiscoveryHandler(TaskHandler):
 
 
 class SentinelDownloadHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         log_context = {
             "WORKER_ID": task.get_worker_id(),
             "TASK_ID": task.get_task_id(),
@@ -303,7 +303,7 @@ class SentinelDownloadHandler(TaskHandler):
 
 
 class SentinelUnzipHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Unzips the downloaded Sentinel data file.
 
@@ -369,7 +369,7 @@ class SentinelUnzipHandler(TaskHandler):
 
 
 class SentinelCheckIntegrityHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         log_context = {
             "WORKER_ID": task.get_worker_id(),
             "TASK_ID": task.get_task_id(),
@@ -405,7 +405,7 @@ class SentinelCheckIntegrityHandler(TaskHandler):
 
 
 class SentinelExtractMetadataHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         log_context = {
             "WORKER_ID": task.get_worker_id(),
             "TASK_ID": task.get_task_id(),
@@ -445,7 +445,7 @@ class SentinelExtractMetadataHandler(TaskHandler):
 
 
 class SentinelRegisterMetadataHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         log_context = {
             "WORKER_ID": task.get_worker_id(),
             "TASK_ID": task.get_task_id(),

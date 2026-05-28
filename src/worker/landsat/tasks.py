@@ -17,7 +17,7 @@ configure_logging()
 
 
 class LandsatDiscoverHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Searches for new Landsat data
 
@@ -96,7 +96,7 @@ class LandsatDiscoverHandler(TaskHandler):
 
 
 class LandsatContinuousDiscoveryHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Searches for new Landsat data continuously
 
@@ -163,7 +163,7 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
 
 
 class LandsatGetDownloadUrlHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Get download urls for discovered scenes
 
@@ -208,7 +208,7 @@ class LandsatGetDownloadUrlHandler(TaskHandler):
 
 
 class LandsatDownloadHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Downloads a Landsat scene
 
@@ -271,7 +271,7 @@ class LandsatDownloadHandler(TaskHandler):
 
 
 class LandsatUntarHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Extracts the downloaded scene
 
@@ -315,7 +315,7 @@ class LandsatUntarHandler(TaskHandler):
 
 
 class LandsatExtractMetadataHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Extract STAC metadata
 
@@ -360,7 +360,7 @@ class LandsatExtractMetadataHandler(TaskHandler):
 
 
 class LandsatRegisterMetadataHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict) -> TaskResult:
+    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Register metadata at catalog
 

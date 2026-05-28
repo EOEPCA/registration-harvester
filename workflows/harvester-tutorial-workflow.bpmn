@@ -20,7 +20,7 @@
     <bpmn:serviceTask id="tutorial_process_item" name="Process STAC Item" camunda:type="external" camunda:topic="tutorial_process_item">
       <bpmn:incoming>Flow_1in26fb</bpmn:incoming>
       <bpmn:outgoing>Flow_0rj5gas</bpmn:outgoing>
-      <bpmn:multiInstanceLoopCharacteristics camunda:asyncAfter="true" camunda:collection="${items.elements()}" camunda:elementVariable="item" />
+      <bpmn:multiInstanceLoopCharacteristics camunda:asyncAfter="true" camunda:collection="${items}" camunda:elementVariable="item" />
     </bpmn:serviceTask>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">

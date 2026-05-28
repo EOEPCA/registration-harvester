@@ -44,7 +44,7 @@
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_1k4n5o7</bpmn:incoming>
       <bpmn:outgoing>Flow_0kbc8tw</bpmn:outgoing>
-      <bpmn:multiInstanceLoopCharacteristics camunda:asyncAfter="true" camunda:collection="${scenes.elements()}" />
+      <bpmn:multiInstanceLoopCharacteristics camunda:asyncAfter="true" camunda:collection="${scenes}" camunda:elementVariable="scene" />
     </bpmn:callActivity>
     <bpmn:exclusiveGateway id="Gateway_11p37gr">
       <bpmn:incoming>Flow_0pdlcz5</bpmn:incoming>

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_07lfhma" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.20.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.20.0">
+  <bpmn:collaboration id="Collaboration_0jmdu6l">
+    <bpmn:participant id="Pool_1" name="Harvest Catalog" processRef="stac-harvest-catalog" />
+  </bpmn:collaboration>
+  <bpmn:process id="stac-harvest-catalog" name="Harvest Catalog" isExecutable="true" camunda:historyTimeToLive="1">
+    <bpmn:laneSet id="LaneSet_1rffc7w">
+      <bpmn:lane id="Lane_18w7odu">
+        <bpmn:flowNodeRef>stac_harvest_catalog</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_08fv90z</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>stac_harvest_collections</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:serviceTask id="stac_harvest_catalog" name="Harvest Catalog" camunda:asyncAfter="true" camunda:type="external" camunda:topic="stac_harvest_catalog">
+      <bpmn:incoming>Flow_0tjq4io</bpmn:incoming>
+      <bpmn:outgoing>Flow_1ggfyng</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0tjq4io" sourceRef="StartEvent_1" targetRef="stac_harvest_catalog" />
+    <bpmn:sequenceFlow id="Flow_1ggfyng" sourceRef="stac_harvest_catalog" targetRef="stac_harvest_collections" />
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_0tjq4io</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:subProcess id="stac_harvest_collections" name="Harvest Collections" camunda:asyncAfter="true">
+      <bpmn:incoming>Flow_1ggfyng</bpmn:incoming>
+      <bpmn:outgoing>Flow_12l3m97</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics camunda:asyncAfter="true" camunda:collection="${collections}" camunda:elementVariable="collection" />
+      <bpmn:startEvent id="Event_1f2ebk3">
+        <bpmn:outgoing>Flow_0f3e7n5</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="Flow_0f3e7n5" sourceRef="Event_1f2ebk3" targetRef="stac_harvest_collection" />
+      <bpmn:serviceTask id="stac_harvest_collection" name="Harvest Collection" camunda:asyncAfter="true" camunda:type="external" camunda:topic="stac_harvest_collection">
+        <bpmn:incoming>Flow_0f3e7n5</bpmn:incoming>
+        <bpmn:outgoing>Flow_0jpcy5a</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:sequenceFlow id="Flow_0jpcy5a" sourceRef="stac_harvest_collection" targetRef="stac_harvest_items" />
+      <bpmn:subProcess id="stac_harvest_items" name="Harvest Items" camunda:asyncAfter="true">
+        <bpmn:incoming>Flow_0jpcy5a</bpmn:incoming>
+        <bpmn:outgoing>Flow_0jjmnq3</bpmn:outgoing>
+        <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:asyncAfter="true" camunda:collection="${items}" camunda:elementVariable="item" />
+        <bpmn:startEvent id="Event_1gljjvs">
+          <bpmn:outgoing>Flow_0mlxa6s</bpmn:outgoing>
+        </bpmn:startEvent>
+        <bpmn:sequenceFlow id="Flow_0mlxa6s" sourceRef="Event_1gljjvs" targetRef="stac_harvest_item" />
+        <bpmn:serviceTask id="stac_harvest_item" name="Harvest Item" camunda:asyncAfter="true" camunda:type="external" camunda:topic="stac_harvest_item">
+          <bpmn:incoming>Flow_0mlxa6s</bpmn:incoming>
+          <bpmn:outgoing>Flow_0ay57jf</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:endEvent id="Event_0fxrrey">
+          <bpmn:incoming>Flow_0ay57jf</bpmn:incoming>
+        </bpmn:endEvent>
+        <bpmn:sequenceFlow id="Flow_0ay57jf" sourceRef="stac_harvest_item" targetRef="Event_0fxrrey" />
+      </bpmn:subProcess>
+      <bpmn:endEvent id="Event_12zy7u9">
+        <bpmn:incoming>Flow_0jjmnq3</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_0jjmnq3" sourceRef="stac_harvest_items" targetRef="Event_12zy7u9" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="Flow_12l3m97" sourceRef="stac_harvest_collections" targetRef="Event_08fv90z" />
+    <bpmn:endEvent id="Event_08fv90z">
+      <bpmn:incoming>Flow_12l3m97</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_0jmdu6l">
+      <bpmndi:BPMNShape id="Participant_1idotw0_di" bpmnElement="Pool_1" isHorizontal="true">
+        <dc:Bounds x="160" y="120" width="690" height="250" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_18w7odu_di" bpmnElement="Lane_18w7odu" isHorizontal="true">
+        <dc:Bounds x="190" y="120" width="660" height="250" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0589mng_di" bpmnElement="stac_harvest_catalog">
+        <dc:Bounds x="346" y="205" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="252" y="227" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_08fv90z_di" bpmnElement="Event_08fv90z">
+        <dc:Bounds x="682" y="227" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0sw4p8x_di" bpmnElement="stac_harvest_collections">
+        <dc:Bounds x="510" y="205" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0tjq4io_di" bpmnElement="Flow_0tjq4io">
+        <di:waypoint x="288" y="245" />
+        <di:waypoint x="346" y="245" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ggfyng_di" bpmnElement="Flow_1ggfyng">
+        <di:waypoint x="446" y="245" />
+        <di:waypoint x="510" y="245" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12l3m97_di" bpmnElement="Flow_12l3m97">
+        <di:waypoint x="610" y="245" />
+        <di:waypoint x="682" y="245" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_025itt6">
+    <bpmndi:BPMNPlane id="BPMNPlane_0j2naai" bpmnElement="stac_harvest_collections">
+      <bpmndi:BPMNShape id="Event_1f2ebk3_di" bpmnElement="Event_1f2ebk3">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_04ri23w_di" bpmnElement="stac_harvest_collection">
+        <dc:Bounds x="240" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_12zy7u9_di" bpmnElement="Event_12zy7u9">
+        <dc:Bounds x="562" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0o8mkao_di" bpmnElement="stac_harvest_items">
+        <dc:Bounds x="400" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0f3e7n5_di" bpmnElement="Flow_0f3e7n5">
+        <di:waypoint x="188" y="120" />
+        <di:waypoint x="240" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0jpcy5a_di" bpmnElement="Flow_0jpcy5a">
+        <di:waypoint x="340" y="120" />
+        <di:waypoint x="400" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0jjmnq3_di" bpmnElement="Flow_0jjmnq3">
+        <di:waypoint x="500" y="120" />
+        <di:waypoint x="562" y="120" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_0w8v9lb">
+    <bpmndi:BPMNPlane id="BPMNPlane_1x6gsi2" bpmnElement="stac_harvest_items">
+      <bpmndi:BPMNShape id="Event_1gljjvs_di" bpmnElement="Event_1gljjvs">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0tjkgge_di" bpmnElement="stac_harvest_item">
+        <dc:Bounds x="240" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0fxrrey_di" bpmnElement="Event_0fxrrey">
+        <dc:Bounds x="392" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0mlxa6s_di" bpmnElement="Flow_0mlxa6s">
+        <di:waypoint x="188" y="120" />
+        <di:waypoint x="240" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ay57jf_di" bpmnElement="Flow_0ay57jf">
+        <di:waypoint x="340" y="120" />
+        <di:waypoint x="392" y="120" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
