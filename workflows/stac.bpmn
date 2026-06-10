@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_07lfhma" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.20.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.20.0">
   <bpmn:collaboration id="Collaboration_0jmdu6l">
-    <bpmn:participant id="Pool_1" name="Harvest Catalog" processRef="stac-harvest-catalog" />
+    <bpmn:participant id="Pool_1" name="Harvest STAC Catalog" processRef="stac-harvest-catalog" />
   </bpmn:collaboration>
-  <bpmn:process id="stac-harvest-catalog" name="Harvest Catalog" isExecutable="true" camunda:historyTimeToLive="1">
+  <bpmn:process id="stac-harvest-catalog" name="Harvest STAC Catalog" isExecutable="true" camunda:historyTimeToLive="1">
     <bpmn:laneSet id="LaneSet_1rffc7w">
       <bpmn:lane id="Lane_18w7odu">
         <bpmn:flowNodeRef>stac_harvest_catalog</bpmn:flowNodeRef>
@@ -77,12 +77,12 @@
       <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
         <dc:Bounds x="252" y="227" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_08fv90z_di" bpmnElement="Event_08fv90z">
-        <dc:Bounds x="682" y="227" width="36" height="36" />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_0sw4p8x_di" bpmnElement="stac_harvest_collections">
         <dc:Bounds x="510" y="205" width="100" height="80" />
         <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_08fv90z_di" bpmnElement="Event_08fv90z">
+        <dc:Bounds x="682" y="227" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_0tjq4io_di" bpmnElement="Flow_0tjq4io">
         <di:waypoint x="288" y="245" />
@@ -106,12 +106,12 @@
       <bpmndi:BPMNShape id="Activity_04ri23w_di" bpmnElement="stac_harvest_collection">
         <dc:Bounds x="240" y="80" width="100" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_12zy7u9_di" bpmnElement="Event_12zy7u9">
-        <dc:Bounds x="562" y="102" width="36" height="36" />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_0o8mkao_di" bpmnElement="stac_harvest_items">
         <dc:Bounds x="400" y="80" width="100" height="80" />
         <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_12zy7u9_di" bpmnElement="Event_12zy7u9">
+        <dc:Bounds x="562" y="102" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_0f3e7n5_di" bpmnElement="Flow_0f3e7n5">
         <di:waypoint x="188" y="120" />
