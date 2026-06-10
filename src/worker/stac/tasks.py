@@ -154,28 +154,38 @@ class StacCollectionHandler(TaskHandler):
             "TOPIC_NAME": task.get_topic_name(),
         }
 
-        # Get and validate job variables
-        collection_param = task.get_variable("collection")
-        if not collection_param:
-            raise ValueError("Missing required variable: collection")
-        stac_update_collections = True
-        stac_update_collections_param = task.get_variable("stac_update_collections")
-        if stac_update_collections_param is not None:
-            if isinstance(stac_update_collections_param, str):
-                stac_update_collections = stac_update_collections_param.lower() == "true"
-            else:
-                stac_update_collections = stac_update_collections_param
+        try:
+            # Get job variables and config
+            collection_param = task.get_variable("collection")
+            if not collection_param:
+                raise ValueError("Missing required variable: collection")
 
-        # Get and validate required configuration values
-        url = str(self.get_config("stac_api_url", ""))
-        if url.endswith("/"):
-            url = url[:-1]
+            stac_update_collections = True
+            stac_update_collections_param = task.get_variable("stac_update_collections")
+            if stac_update_collections_param is not None:
+                if isinstance(stac_update_collections_param, str):
+                    stac_update_collections = stac_update_collections_param.lower() == "true"
+                else:
+                    stac_update_collections = stac_update_collections_param
 
-        auth = (self.get_config("stac_api_user", None), self.get_config("stac_api_pw", None))
-        if not url:
-            raise ValueError("Missing required configuration: stac_api_url")
-        if not auth[0] or not auth[1]:
-            auth = None
+            # Get destination STAC API from process variable
+            stac_api_destination_url = task.get_variable("stac_api_destination_url")
+            if not stac_api_destination_url:
+                # Try to get it from config
+                stac_api_destination_url = self.get_config("stac_api_destination_url", None)
+
+            if not stac_api_destination_url:
+                raise ValueError("Missing required input variable or configuration: stac_api_destination_url")
+
+            if stac_api_destination_url.endswith("/"):
+                stac_api_destination_url = stac_api_destination_url[:-1]
+
+            auth = (self.get_config("stac_api_user", None), self.get_config("stac_api_pw", None))
+            if not auth[0] or not auth[1]:
+                auth = None
+
+        except Exception as e:
+            return task.failure(error_message="Error", error_details=str(e), max_retries=0, retry_timeout=0)
 
         # List of all collection items to load
         items = []
@@ -277,14 +287,14 @@ class StacCollectionHandler(TaskHandler):
         try:
             log_with_context(f"Publishing collection {collection.id} ...", log_context)
             for collection_loaded in load_stac_api_collections(
-                url=url,
+                url=stac_api_destination_url,
                 collections=[collection],
                 headers=headers,
                 verify=False,
                 update=stac_update_collections,
                 auth=None,
             ):
-                url = os.path.join(url, "collections", collection_loaded.id)
+                url = os.path.join(stac_api_destination_url, "collections", collection_loaded.id)
                 log_with_context(f"Successfully published collection at {url}", log_context)
         except HTTPStatusError as e:
             error = str(e)
@@ -336,28 +346,38 @@ class StacItemHandler(TaskHandler):
             "TOPIC_NAME": task.get_topic_name(),
         }
 
-        # Get and validate job variables
-        item_param = task.get_variable("item")
-        if not item_param:
-            raise ValueError("Missing required variable: item")
-        stac_update_items = True
-        stac_update_items_param = task.get_variable("stac_update_items")
-        if stac_update_items_param is not None:
-            if isinstance(stac_update_items_param, str):
-                stac_update_items = stac_update_items_param.lower() == "true"
-            else:
-                stac_update_items = stac_update_items_param
+        try:
+            # Get and validate job variables
+            item_param = task.get_variable("item")
+            if not item_param:
+                raise ValueError("Missing required variable: item")
 
-        # Get and validate required configuration values
-        url = str(self.get_config("stac_api_url", ""))
-        if url.endswith("/"):
-            url = url[:-1]
+            stac_update_items = True
+            stac_update_items_param = task.get_variable("stac_update_items")
+            if stac_update_items_param is not None:
+                if isinstance(stac_update_items_param, str):
+                    stac_update_items = stac_update_items_param.lower() == "true"
+                else:
+                    stac_update_items = stac_update_items_param
 
-        auth = (self.get_config("stac_api_user", None), self.get_config("stac_api_pw", None))
-        if not url:
-            raise ValueError("Missing required configuration: stac_api_url")
-        if not auth[0] or not auth[1]:
-            auth = None
+            # Get destination STAC API from workflow variable
+            stac_api_destination_url = task.get_variable("stac_api_destination_url")
+            if not stac_api_destination_url:
+                # Try to get from config
+                stac_api_destination_url = str(self.get_config("stac_api_destination_url", None))
+
+            if not stac_api_destination_url:
+                raise ValueError("Missing required input variable or configuration: stac_api_destination_url")
+
+            if stac_api_destination_url.endswith("/"):
+                stac_api_destination_url = stac_api_destination_url[:-1]
+
+            auth = (self.get_config("stac_api_user", None), self.get_config("stac_api_pw", None))
+            if not auth[0] or not auth[1]:
+                auth = None
+
+        except Exception as e:
+            return task.failure(error_message="Error", error_details=str(e), max_retries=0, retry_timeout=0)
 
         # Retrieve item
         try:
@@ -430,14 +450,16 @@ class StacItemHandler(TaskHandler):
         try:
             log_with_context(f"Publishing item {item.id} ...", log_context)
             for item_loaded in load_stac_api_items(
-                url=url,
+                url=stac_api_destination_url,
                 items=[item],
                 headers=headers,
                 verify=False,
                 update=stac_update_items,
                 auth=None,
             ):
-                url = os.path.join(url, "collections", item_loaded.collection_id, "items", item_loaded.id)
+                url = os.path.join(
+                    stac_api_destination_url, "collections", item_loaded.collection_id, "items", item_loaded.id
+                )
                 log_with_context(f"Successfully published item at {url}", log_context)
 
         except HTTPStatusError as e:

@@ -13,10 +13,11 @@ logger = logging.getLogger()
 configure_logging()
 
 
-class SubscriptionManager:
+class WorkerManager:
     """ """
 
-    def __init__(self):
+    def __init__(self, shutdown_event):
+        self.shutdown_event = shutdown_event
         self.exernal_task_worker = {}
         self._create_workers_from_config()
 
@@ -70,6 +71,7 @@ class SubscriptionManager:
                         base_url=task_config["base_url"],
                         worker_id=worker_id,
                         config=task_config,
+                        stop_event=self.shutdown_event,
                     )
                     executor.submit(
                         external_task_worker.subscribe,

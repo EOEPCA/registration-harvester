@@ -4,31 +4,36 @@ bpm_engine:
   lock_duration: 300000  # 5 minutes
   retries: 3
   retry_timeout: 30000  # 30 seconds
-  async_response_timeout: 30000 # 30 seconds
-  timeout_delta_millis: 300000 # 5 minutes
+  # Long Polling timeout (in milliseconds) when fetching and locking tasks from server.
+  # The maximum time the request is suspended by the server, if no external tasks are available.
+  async_response_timeout: 30000 # 30 seconds 
+  # Delta added to Long Polling timeout used as HTTP request timeout when fetching and locking tasks from server.
+  timeout_delta_millis: 30000   # 30 seconds
+  # Waiting time before retry after unhandled exception when executing tasks
   sleep_seconds: 15
-  http_timeout_millis: 420000 # 7 minutes
+  # Timeout for HTTP request returning results to the server (success or failure)
+  http_timeout_millis: 420000 # 7 minutes 
 iam:
   oidc_token_endpoint_url: https://iam-auth.develop.eoepca.org/realms/eoepca/protocol/openid-connect/token
 topics:
   stac_harvest_catalog:
     module: worker.stac.tasks
     handler: StacCatalogHandler
-    lock_duration: 6000000   # 10 minutes
+    lock_duration: 600000   # 10 minutes
     workers: 1
     parallel_tasks: 1
     retries: 5
   stac_harvest_collection:
     module: worker.stac.tasks
     handler: StacCollectionHandler
-    lock_duration: 6000000   # 10 minutes
+    lock_duration: 600000   # 10 minutes
     workers: 1
     parallel_tasks: 1
     retries: 5
   stac_harvest_item:
     module: worker.stac.tasks
     handler: StacItemHandler
-    lock_duration: 6000000   # 10 minutes
+    lock_duration: 600000   # 10 minutes
     workers: 1
     parallel_tasks: 1
     retries: 5
@@ -36,12 +41,12 @@ handlers:
   StacCatalogHandler:
   StacCollectionHandler:
     timewindow_hours: 1
-    stac_api_url: https://eoapi.develop.eoepca.org/stac/
+    stac_api_destination_url: https://eoapi.develop.eoepca.org/stac/
     stac_api_ca_cert: ""
     stac_api_user: ""
     stac_api_pw: ""
   StacItemHandler:
-    stac_api_url: https://eoapi.develop.eoepca.org/stac/
+    stac_api_destination_url: https://eoapi.develop.eoepca.org/stac/
     stac_api_ca_cert: ""      
     stac_api_user: ""
-    stac_api_pw: ""  
+    stac_api_pw: ""
