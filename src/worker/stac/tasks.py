@@ -8,7 +8,7 @@ from eodm.load import load_stac_api_collections, load_stac_api_items
 from eodm.stac_contrib import FSSpecStacIO
 from httpx import HTTPStatusError
 from operaton.external_task.external_task import ExternalTask, TaskResult
-from pystac import Catalog, Collection, Item, StacIO
+from pystac import Catalog, Collection, Item, RelType, StacIO
 
 from worker.common.log_utils import configure_logging, log_with_context
 from worker.common.search_interval import determine_search_interal
@@ -286,6 +286,11 @@ class StacCollectionHandler(TaskHandler):
         # Publish stac collection
         try:
             log_with_context(f"Publishing collection {collection.id} ...", log_context)
+            log_with_context("Clearing root, parent, self and items links ...", log_context)
+            collection.clear_links(rel=RelType.PARENT)
+            collection.clear_links(rel=RelType.ROOT)
+            collection.clear_links(rel=RelType.SELF)
+            collection.clear_links(rel=RelType.ITEMS)
             for collection_loaded in load_stac_api_collections(
                 url=stac_api_destination_url,
                 collections=[collection],
@@ -449,6 +454,11 @@ class StacItemHandler(TaskHandler):
         # Publish STAC item
         try:
             log_with_context(f"Publishing item {item.id} ...", log_context)
+            log_with_context("Clearing root, parent, self and collection links ...", log_context)
+            item.clear_links(rel=RelType.PARENT)
+            item.clear_links(rel=RelType.ROOT)
+            item.clear_links(rel=RelType.SELF)
+            item.clear_links(rel=RelType.COLLECTION)
             for item_loaded in load_stac_api_items(
                 url=stac_api_destination_url,
                 items=[item],
