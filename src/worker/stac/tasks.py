@@ -8,7 +8,7 @@ from eodm.load import load_stac_api_collections, load_stac_api_items
 from eodm.stac_contrib import FSSpecStacIO
 from httpx import HTTPStatusError
 from operaton.external_task.external_task import ExternalTask, TaskResult
-from pystac import Catalog, Collection, Item, RelType, StacIO
+from pystac import Catalog, Collection, Item, Link, RelType, StacIO
 
 from worker.common.log_utils import configure_logging, log_with_context
 from worker.common.search_interval import determine_search_interal
@@ -287,10 +287,17 @@ class StacCollectionHandler(TaskHandler):
         try:
             log_with_context(f"Publishing collection {collection.id} ...", log_context)
             log_with_context("Clearing root, parent, self and items links ...", log_context)
-            collection.clear_links(rel=RelType.PARENT)
+            root_link = stac_api_destination_url
+            self_link = os.path.join(root_link, "collections", collection.id)
+            items_link = os.path.join(self_link, "items")
             collection.clear_links(rel=RelType.ROOT)
+            collection.clear_links(rel=RelType.PARENT)
             collection.clear_links(rel=RelType.SELF)
             collection.clear_links(rel=RelType.ITEMS)
+            collection.add_link(link=Link(rel=RelType.ROOT, target=root_link))
+            collection.add_link(link=Link(rel=RelType.PARENT, target=root_link))
+            collection.add_link(link=Link(rel=RelType.SELF, target=self_link))
+            collection.add_link(link=Link(rel=RelType.ITEMS, target=items_link))
             for collection_loaded in load_stac_api_collections(
                 url=stac_api_destination_url,
                 collections=[collection],
@@ -455,10 +462,17 @@ class StacItemHandler(TaskHandler):
         try:
             log_with_context(f"Publishing item {item.id} ...", log_context)
             log_with_context("Clearing root, parent, self and collection links ...", log_context)
-            item.clear_links(rel=RelType.PARENT)
             item.clear_links(rel=RelType.ROOT)
+            item.clear_links(rel=RelType.PARENT)
             item.clear_links(rel=RelType.SELF)
             item.clear_links(rel=RelType.COLLECTION)
+            root_link = stac_api_destination_url
+            collection_link = os.path.join(root_link, "collections", item.collection_id)
+            self_link = os.path.join(collection_link, "items", item.id)
+            item.add_link(link=Link(rel=RelType.ROOT, target=root_link))
+            item.add_link(link=Link(rel=RelType.PARENT, target=collection_link))
+            item.add_link(link=Link(rel=RelType.SELF, target=self_link))
+            item.add_link(link=Link(rel=RelType.COLLECTION, target=collection_link))
             for item_loaded in load_stac_api_items(
                 url=stac_api_destination_url,
                 items=[item],
