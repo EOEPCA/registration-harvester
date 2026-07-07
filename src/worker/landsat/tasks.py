@@ -1,7 +1,9 @@
 import json
 import os
+from pathlib import Path
 
 from operaton.external_task.external_task import ExternalTask, TaskResult
+from eodag import EODataAccessGateway, EOProduct
 
 from worker.common.base.file import untar_file
 from worker.common.datasets import landsat
@@ -11,7 +13,7 @@ from worker.common.resources import stac
 from worker.common.search_interval import determine_search_interal
 from worker.common.secrets import worker_secrets
 from worker.common.task_handler import TaskHandler
-from worker.landsat.discovery import search
+# from worker.landsat.discovery import search
 
 configure_logging()
 
@@ -40,21 +42,25 @@ class LandsatDiscoverHandler(TaskHandler):
         log_with_context("Discovering new Landsat data ...", log_context)
 
         # Configuration
-        api_url = self.get_config("usgs_api_url", "https://landsatlook.usgs.gov/stac-server")
         page_size = self.get_config("page_size", 100)
 
         # Process variables
         param_collections = task.get_variable("collections")
         param_datetime_interval = task.get_variable("datetime_interval")
         param_bbox = task.get_variable("bbox")
-        param_query = task.get_variable("query")
 
         # Discover scenes
         collections = (
             param_collections.split(",") if param_collections is not None and len(param_collections) > 0 else None
         )
         bbox = param_bbox.split(",") if param_bbox is not None and len(param_bbox) > 0 else None
-        query = json.loads(param_query) if param_query is not None and len(param_query) > 0 else None
+
+        start_time, end_time = param_datetime_interval.split("/")
+
+        ingest_filter = {"start": start_time, "end": end_time}
+        scene_filter_input = {
+            "ingestFilter": ingest_filter
+        }
 
         if collections is None:
             return task.failure(
@@ -64,7 +70,7 @@ class LandsatDiscoverHandler(TaskHandler):
                 retry_timeout=0,
             )
 
-        if param_datetime_interval is None and bbox is None and query is None:
+        if param_datetime_interval is None and bbox is None:
             return task.failure(
                 error_message="Missing input variable",
                 error_details="One of the input variables datetime_interval, bbox or query must be provided",
@@ -75,14 +81,36 @@ class LandsatDiscoverHandler(TaskHandler):
         log_with_context(f"Search parameter: collections={collections}", log_context)
         log_with_context(f"Search parameter: datetime_interval='{param_datetime_interval}'", log_context)
         log_with_context(f"Search parameter: bbox='{bbox}'", log_context)
-        log_with_context(f"Search parameter: query='{query}'", log_context)
+
+        scene_essentials = []
 
         try:
-            scenes = search(api_url, collections, bbox, param_datetime_interval, page_size, query)
-            log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
-            for idx, item in enumerate(scenes, 1):
-                # log_with_context(json.dumps(item))
-                log_with_context(f"{idx} {api_url}/collections/{item['collection']}/items/{item['id']}", log_context)
+            dag = EODataAccessGateway()
+            # todo: collection iteration?
+            for collection in collections:
+
+                scenes = dag.search_all(
+                    provider="usgs",
+                    collection=collection,
+                    bbox=bbox,
+                    limit=page_size,
+                    scene_filter=scene_filter_input,
+                )
+
+                log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
+
+                for idx, scene in enumerate(scenes, 1):
+                    log_with_context(f"{idx} {scene.properties['id']}", log_context)
+
+                    # Strip scenes to essentials
+                    property_keys_template: list[str] = ["uid", "usgs:productId", "usgs:entityId",
+                                                         "eodag:download_link"]
+                    payload: dict = {key: scene.properties.get(key)
+                                     for key in property_keys_template
+                                     if key in scene.properties}
+                    payload["eodag:provider"] = scene.provider
+                    payload["id"] = scene.properties["id"]
+                    scene_essentials.append(payload)
 
         except Exception as e:
             return task.failure(
@@ -92,7 +120,7 @@ class LandsatDiscoverHandler(TaskHandler):
                 retry_timeout=TaskHandler.TIMEOUT_5_MINUTES,
             )
 
-        return task.complete(global_variables={"scenes": scenes})
+        return task.complete(global_variables={"scenes": scene_essentials})
 
 
 class LandsatContinuousDiscoveryHandler(TaskHandler):
@@ -116,11 +144,12 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
             "TOPIC_NAME": task.get_topic_name(),
         }
 
+        scene_essentials = []
+
         if self.get_config("enabled", False):
-            log_with_context("Continous discovery of new Landsat data ...", log_context)
+            log_with_context("Continuous discovery of new Landsat data ...", log_context)
 
             # Handle input variables
-            api_url = self.get_config("usgs_api_url", "https://landsatlook.usgs.gov/stac-server")
             page_size = self.get_config("page_size", 100)
             param_collections = self.get_config("collections", "")
             collections = (
@@ -131,21 +160,41 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
 
             # Create query for time window
             timewindow_hours = self.get_config("timewindow_hours", 1)
-            datetime_property = self.get_config("datetime_property", "created")
             start_time, end_time = determine_search_interal(task, timewindow_hours)
-            query = json.loads(json.dumps({datetime_property: {"gte": start_time, "lt": end_time}}))
+
+            ingest_filter = {"start": start_time, "end": end_time}
+            scene_filter_input = {
+                "ingestFilter": ingest_filter
+            }
 
             log_with_context(f"Search parameter: collections={collections}", log_context)
             log_with_context(f"Search parameter: bbox='{bbox}'", log_context)
-            log_with_context(f"Search parameter: query='{query}'", log_context)
 
             try:
-                scenes = search(api_url, collections, bbox, None, page_size, query)
-                log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
-                for idx, item in enumerate(scenes, 1):
-                    log_with_context(
-                        f"{idx} {api_url}/collections/{item['collection']}/items/{item['id']}", log_context
+                for collection in collections:
+                    dag = EODataAccessGateway()
+
+                    scenes = dag.search_all(
+                        provider="usgs",
+                        collection=collection,
+                        bbox=bbox,
+                        limit=page_size,
+                        scene_filter=scene_filter_input,
                     )
+
+                    log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
+                    for idx, scene in enumerate(scenes, 1):
+                        log_with_context(f"{idx} {scene.properties["id"]}", log_context)
+
+                        # Strip scenes to essentials
+                        property_keys_template: list[str] = ["uid", "usgs:productId", "usgs:entityId",
+                                                             "eodag:download_link"]
+                        payload: dict = {key: scene.properties.get(key)
+                                         for key in property_keys_template
+                                         if key in scene.properties}
+                        payload["eodag:provider"] = scene.provider
+                        payload["id"] = scene.properties["id"]
+                        scene_essentials.append(payload)
 
             except Exception as e:
                 return task.failure(
@@ -154,12 +203,10 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
                     max_retries=3,
                     retry_timeout=TaskHandler.TIMEOUT_5_MINUTES,
                 )
-
         else:
             log_with_context("Continous discovery is disabled by configuration, skipping ...", log_context)
-            scenes = []
 
-        return task.complete(global_variables={"scenes": scenes})
+        return task.complete(global_variables={"scenes": scene_essentials})
 
 
 class LandsatGetDownloadUrlHandler(TaskHandler):
@@ -228,29 +275,35 @@ class LandsatDownloadHandler(TaskHandler):
         }
 
         scene = task.get_variable("scene")
-        if "url" not in scene:
-            return task.failure(
-                error_message="Error downloading scene",
-                error_details="No URL available in scene variable",
-                max_retries=0,
-                retry_timeout=0,
-            )
 
-        download_url = scene["url"]
-        log_with_context("Downloading scene from URL %s" % (download_url), log_context)
+        log_with_context("Downloading scene %s" % (scene['id']), log_context)
 
         base_dir = self.get_config("download_base_dir", "/tmp")
-        download_timeout = self.get_config("download_timeout", 300)
         temp_dir = landsat.get_scene_id_folder(scene["id"])
         download_dir = os.path.join(base_dir, temp_dir)
-        file_path = os.path.join(download_dir, f"{scene['id']}.tar")
+        file_path = str(os.path.join(download_dir, f"{scene['id']}.tar.gz"))
 
         if os.path.exists(file_path):
             log_with_context(f"Skipped download. File {file_path} already exists", log_context)
         else:
             try:
                 log_with_context(f"Downloading scene into directory {download_dir}", log_context)
-                file_path = usgs.download_data(url=download_url, output_dir=download_dir, timeout=download_timeout)
+
+                generic_stac_item: dict = self._create_generic_stac_item(scene["id"])
+                generic_stac_item["properties"].update(scene)
+
+                eoproduct_scene: EOProduct = EOProduct.from_dict(generic_stac_item)
+
+                dag = EODataAccessGateway()
+
+                Path(file_path).parent.mkdir(parents=True, exist_ok=True)
+                paths = dag.download(
+                    product=eoproduct_scene,
+                    extract=False,
+                    output_dir=Path(file_path).parent,
+                    timeout=10 # 10min is eodag default
+                )
+
             except Exception as e:
                 return task.failure(
                     error_message="Download failed",
@@ -268,6 +321,26 @@ class LandsatDownloadHandler(TaskHandler):
                 )
 
         return task.complete(global_variables={"scene_downloaded": True, "tar_file": file_path})
+
+    @staticmethod
+    def _create_generic_stac_item(_id: str) -> dict:
+        return {
+            "type": "Feature",
+            "stac_version": "1.0.0",
+            "id": f"{_id}",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [0, 0]
+            },
+            "properties": {
+                "title": f"{_id}",
+                "eodag:search_intersection": {
+                    "type": "Polygon",
+                    "coordinates": [[
+                    ]]
+                },
+            },
+        }
 
 
 class LandsatUntarHandler(TaskHandler):
