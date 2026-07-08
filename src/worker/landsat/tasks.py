@@ -8,12 +8,9 @@ from eodag import EODataAccessGateway, EOProduct
 from worker.common.base.file import untar_file
 from worker.common.datasets import landsat
 from worker.common.log_utils import configure_logging, log_with_context
-from worker.common.providers import usgs
 from worker.common.resources import stac
 from worker.common.search_interval import determine_search_interal
-from worker.common.secrets import worker_secrets
 from worker.common.task_handler import TaskHandler
-# from worker.landsat.discovery import search
 
 configure_logging()
 
@@ -86,9 +83,7 @@ class LandsatDiscoverHandler(TaskHandler):
 
         try:
             dag = EODataAccessGateway()
-            # todo: collection iteration?
             for collection in collections:
-
                 scenes = dag.search_all(
                     provider="usgs",
                     collection=collection,
@@ -171,9 +166,8 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
             log_with_context(f"Search parameter: bbox='{bbox}'", log_context)
 
             try:
+                dag = EODataAccessGateway()
                 for collection in collections:
-                    dag = EODataAccessGateway()
-
                     scenes = dag.search_all(
                         provider="usgs",
                         collection=collection,
@@ -207,51 +201,6 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
             log_with_context("Continous discovery is disabled by configuration, skipping ...", log_context)
 
         return task.complete(global_variables={"scenes": scene_essentials})
-
-
-class LandsatGetDownloadUrlHandler(TaskHandler):
-    def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
-        """
-        Get download urls for discovered scenes
-
-        Variables needed:
-            scenes: List of scenes found
-
-        Variables set:
-            scenes: List of scenes found
-            urls: List of download urls for scenes
-        """
-
-        log_context = {
-            "WORKER_ID": task.get_worker_id(),
-            "TASK_ID": task.get_task_id(),
-            "TOPIC_NAME": task.get_topic_name(),
-        }
-
-        log_with_context("Get download urls for discovered scenes ...", log_context)
-
-        scenes = task.get_variable("scenes")
-        m2m_api_user = worker_secrets.get_secret("m2m_user", "")
-        m2m_api_password = worker_secrets.get_secret("m2m_password", "")
-        m2m_api_use_token = self.get_config("m2m_use_token", True)
-        m2m_api_url = self.get_config("m2m_api_url", "https://m2m.cr.usgs.gov/api/api/json/stable/")
-
-        try:
-            api_key = usgs.login(m2m_api_user, m2m_api_password, m2m_api_use_token, m2m_api_url)
-            scenes = usgs.add_download_urls(scenes, api_key)
-        except Exception as e:
-            return task.failure(
-                error_message="Error getting download urls",
-                error_details=str(e),
-                max_retries=3,
-                retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
-            )
-
-        for idx, scene in enumerate(scenes, 1):
-            log_with_context(f"{idx} id={scene['id']} collection={scene['collection']} url={scene['url']}", log_context)
-            # log_with_context(json.dumps(scene))
-
-        return task.complete(global_variables={"scenes": scenes})
 
 
 class LandsatDownloadHandler(TaskHandler):

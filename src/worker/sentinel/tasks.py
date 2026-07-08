@@ -9,7 +9,6 @@ from eodag import EODataAccessGateway, EOProduct
 
 from worker.common.datasets import sentinel
 from worker.common.log_utils import configure_logging, format_duration, format_file_metrics, log_with_context
-# from worker.common.providers import cdse
 from worker.common.resources import stac
 from worker.common.search_interval import determine_search_interal
 from worker.common.secrets import worker_secrets
@@ -38,35 +37,54 @@ class SentinelDiscoverHandler(TaskHandler):
 
         log_with_context("Discovering new Sentinel data ...", log_context)
 
+        # Process variables
+        param_collections = task.get_variable("collections")
+        param_datetime_interval = task.get_variable("datetime_interval")
+
+        collections = (
+            param_collections.split(",") if param_collections is not None and len(param_collections) > 0 else None
+        )
+        # todo: no bounding box?
+        start_time, end_time = param_datetime_interval.split("/")
+
         limit = self.get_config("limit", 1000)
+
+        if collections is None:
+            return task.failure(
+                error_message="Missing input variable",
+                error_details="Process input variable 'collections' is mandatory and must have a non-empty value",
+                max_retries=0,
+                retry_timeout=0,
+            )
 
         scene_essentials = []
         # todo: get collections via variable, collection or hardcoded list and iterate try block
         #  for collection in collections: try:
 
         try:
-
             dag = EODataAccessGateway()
+            for collection in collections:
+                scenes = dag.search_all(
+                    provider="cop_dataspace",
+                    collection=collection,
+                    published_after=start_time,
+                    published_before=end_time,
+                    limit=limit
+                )
 
-            scenes = dag.search_all(
-                provider="cop_dataspace",
-                collection="S2_MSI_L2A",        #! ToDo: set collection
-                limit=limit
-            )
+                log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
+                for idx, scene in enumerate(scenes, 1):
+                    log_with_context(f"{idx} {scene.properties["id"]}", log_context)
 
-            log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
-            for idx, scene in enumerate(scenes, 1):
-                log_with_context(f"{idx} {scene.properties["id"]}", log_context)
-
-                # Strip scenes to essentials
-                property_keys_template: list[str] = ["uid", "usgs:productId", "usgs:entityId",
-                                                    "eodag:download_link"]
-                payload: dict = {key: scene.properties.get(key)
-                                for key in property_keys_template
-                                if key in scene.properties}
-                payload["eodag:provider"] = scene.provider
-                payload["id"] = scene.properties["id"]
-                scene_essentials.append(payload)
+                    # Strip scenes to essentials
+                    property_keys_template: list[str] = ["uid", "usgs:productId", "usgs:entityId",
+                                                        "eodag:download_link"]
+                    payload: dict = {key: scene.properties.get(key)
+                                    for key in property_keys_template
+                                    if key in scene.properties}
+                    payload["eodag:provider"] = scene.provider
+                    payload["id"] = scene.properties["id"]
+                    scene_essentials.append(payload)
 
         except Exception as e:
             return task.failure(
@@ -105,33 +123,35 @@ class SentinelContinuousDiscoveryHandler(TaskHandler):
             limit = self.get_config("limit", 1000)
             timewindow_hours = self.get_config("timewindow_hours", 1)
             start_time, end_time = determine_search_interal(task, timewindow_hours)
+            param_collections = self.get_config("collections", "")
+            collections = (
+                param_collections.split(",") if param_collections is not None and len(param_collections) > 0 else None
+            )
 
-            # todo: get collections via variable, collection or hardcoded list and iterate try block
-            #  for collection in collections: try:
             try:
                 dag = EODataAccessGateway()
+                for collection in collections:
+                    scenes = dag.search_all(
+                        provider="cop_dataspace",
+                        collection=collection,
+                        published_after=start_time,
+                        published_before=end_time,
+                        limit=limit
+                    )
 
-                scenes = dag.search_all(
-                    provider="cop_dataspace",
-                    collection="S2_MSI_L2A",        #! ToDo: set collection
-                    published_after=start_time,
-                    published_before=end_time,
-                    limit=limit
-                )
+                    log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
+                    for idx, scene in enumerate(scenes, 1):
+                        log_with_context(f"{idx} {scene.properties["id"]}", log_context)
 
-                log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
-                for idx, scene in enumerate(scenes, 1):
-                    log_with_context(f"{idx} {scene.properties["id"]}", log_context)
-
-                    # Strip scenes to essentials
-                    property_keys_template: list[str] = ["uid", "usgs:productId", "usgs:entityId",
-                                                        "eodag:download_link"]
-                    payload: dict = {key: scene.properties.get(key)
-                                    for key in property_keys_template
-                                    if key in scene.properties}
-                    payload["eodag:provider"] = scene.provider
-                    payload["id"] = scene.properties["id"]
-                    scene_essentials.append(payload)
+                        # Strip scenes to essentials
+                        property_keys_template: list[str] = ["uid", "usgs:productId", "usgs:entityId",
+                                                            "eodag:download_link"]
+                        payload: dict = {key: scene.properties.get(key)
+                                        for key in property_keys_template
+                                        if key in scene.properties}
+                        payload["eodag:provider"] = scene.provider
+                        payload["id"] = scene.properties["id"]
+                        scene_essentials.append(payload)
 
             except Exception as e:
                 return task.failure(

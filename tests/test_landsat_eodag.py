@@ -110,7 +110,7 @@ class TestLandsatHandlerApiInteraction:
 
     # todo: download only for one of the discovery handlers?
     @pytest.mark.e2e_remote_api
-    @pytest.mark.parametrize("discovery_class", [LandsatDiscoverHandler])
+    @pytest.mark.parametrize("discovery_class", [LandsatDiscoverHandler, LandsatContinuousDiscoveryHandler])
     @patch("src.worker.landsat.tasks.determine_search_interal")
     def test_handler_downloads_scenes_from_api(
             self, mock_determine_interval, mock_task, discovery_class, handler_factory, mock_log_with_context, tmp_path
