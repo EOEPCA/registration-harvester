@@ -1,3 +1,4 @@
+import datetime
 import zipfile
 
 import pytest
@@ -46,37 +47,38 @@ def handler_factory(mock_log_with_context):
             return handler_instance
     return _create
 
-# todo: keep both tests or just the download test?
+
 class TestSentinelHandlerApiInteraction:
     """
     Tests the interaction with the API for Sentinel.
     """
 
-    @pytest.mark.e2e_remote_api
-    @pytest.mark.parametrize("discovery_class", [SentinelContinuousDiscoveryHandler, SentinelDiscoverHandler])
-    @patch("src.worker.sentinel.tasks.determine_search_interal")
-    def test_handler_returns_scenes_from_api(
-            self, mock_determine_interval, mock_task, handler_factory, discovery_class, mock_log_with_context
+    @pytest.mark.parametrize("discovery_class", [SentinelContinuousDiscoveryHandler])
+    @patch("src.worker.common.search_interval.datetime")
+    def test_SentinelContinuousDiscoveryHandler_returns_scenes_from_api(
+            self, mock_datetime, mocker, mock_task, handler_factory, discovery_class, mock_log_with_context
     ):
         """
-        Tests SentinelContinuousDiscoveryHandler and SentinelDiscoverHandler
+        Tests SentinelContinuousDiscoveryHandler
         """
         ### Arrange ###
         discovery_handler = handler_factory(discovery_class)
-
-        mock_determine_interval.return_value = ("2026-01-01T00:00:00Z", "2026-01-01T02:00:00Z")
-
-        mock_task.get_variable.side_effect = {
-            "datetime_interval": "2026-01-01T23:01:00Z/2026-01-02T00:00:00Z",
-            "collections": "S2_MSI_L1C,S2_MSI_L2A",
-            #"bbox":None,
-        }.get
 
         discovery_handler.get_config.side_effect = {
             "enabled": True,
             "limit": 1000,
             "collections": "S2_MSI_L2A,S2_MSI_L1C",
+            "timewindow_hours": 1,
         }.get
+
+        # mock EngineClient & API Response
+        from operaton.client.engine_client import EngineClient
+        mock_method = mocker.patch.object(EngineClient, 'get_process_instance_history')
+        mock_method.return_value = {"startTime": "2026-01-01T00:00:00Z"}
+
+        # keep real datetime-class for constructors
+        mock_datetime.datetime.side_effect = lambda *args, **kw: datetime.datetime(*args, **kw)
+        mock_datetime.timedelta = datetime.timedelta
 
         ### Act ###
         discovery_handler.execute(mock_task)
@@ -106,38 +108,29 @@ class TestSentinelHandlerApiInteraction:
         has_s2a_msil1c = any("S2A_MSIL1C" in scene.get("id", "") for scene in scenes)
         has_s2b_msil1c = any("S2B_MSIL1C" in scene.get("id", "") for scene in scenes)
 
-        assert has_s2a_msil2a or has_s2b_msil2a, "Collection S2_MSI_L2A fehlt!"
-        assert has_s2a_msil1c or has_s2b_msil1c, "Collection S2_MSI_L1C fehlt!"
+        assert has_s2a_msil2a or has_s2b_msil2a, "Collection S2_MSI_L2A missing!"
+        assert has_s2a_msil1c or has_s2b_msil1c, "Collection S2_MSI_L1C missing!"
 
-    # todo: download only for one of the discovery handlers?
-    @pytest.mark.e2e_remote_api
-    @pytest.mark.parametrize("discovery_class", [SentinelDiscoverHandler, SentinelContinuousDiscoveryHandler])
-    @patch("src.worker.sentinel.tasks.determine_search_interal")
-    def test_handler_downloads_scenes_from_api(
-            self, mock_determine_interval, mock_task, handler_factory, discovery_class, mock_log_with_context, tmp_path
+    @pytest.mark.parametrize("discovery_class", [SentinelDiscoverHandler])
+    def test_SentinelDiscoverHandler_downloads_scenes_from_api(
+            self, mock_task, handler_factory, discovery_class, mock_log_with_context, tmp_path
     ):
         """
-        Tests SentinelContinuousDiscoveryHandler and SentinelDiscoverHandler for Data Discovery and
-        SentinelDownloadHandler for Data Download e2e.
+        Tests SentinelDiscoverHandler for Data Discovery and
+        Data Download e2e.
         """
         ####### Discovery Test #######
         ### Arrange ###
         discovery_handler = handler_factory(discovery_class)
 
-        mock_determine_interval.return_value = ("2026-01-01T00:00:00Z", "2026-01-01T02:00:00Z")
-
         mock_task.get_variable.side_effect = {
             "datetime_interval": "2026-01-01T23:01:00Z/2026-01-02T00:00:00Z",
             "collections": "S2_MSI_L1C,S2_MSI_L2A",
-            #"bbox":None,
         }.get
 
         discovery_handler.get_config.side_effect = {
-            "enabled": True,
             "limit": 1000,
-            "collections": "S2_MSI_L2A,S2_MSI_L1C",
         }.get
-
 
         ### Act ###
         discovery_handler.execute(mock_task)

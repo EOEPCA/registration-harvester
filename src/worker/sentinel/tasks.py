@@ -44,7 +44,7 @@ class SentinelDiscoverHandler(TaskHandler):
         collections = (
             param_collections.split(",") if param_collections is not None and len(param_collections) > 0 else None
         )
-        # todo: no bounding box?
+
         start_time, end_time = param_datetime_interval.split("/")
 
         limit = self.get_config("limit", 1000)
@@ -58,8 +58,6 @@ class SentinelDiscoverHandler(TaskHandler):
             )
 
         scene_essentials = []
-        # todo: get collections via variable, collection or hardcoded list and iterate try block
-        #  for collection in collections: try:
 
         try:
             dag = EODataAccessGateway()

@@ -1,8 +1,10 @@
+import datetime
 import tarfile
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from operaton.external_task.external_task import ExternalTask
+from pytest_mock import mocker
 
 from src.worker.landsat.tasks import (LandsatDiscoverHandler,
                                       LandsatContinuousDiscoveryHandler,
@@ -47,39 +49,39 @@ def handler_factory(mock_log_with_context):
     return _create
 
 
-# todo: keep both tests or just the download test?
 class TestLandsatHandlerApiInteraction:
     """
     Tests the interaction with the API for Landsat.
     """
 
-    @pytest.mark.e2e_remote_api
-    @pytest.mark.parametrize("discovery_class", [LandsatDiscoverHandler, LandsatContinuousDiscoveryHandler])
-    @patch("src.worker.landsat.tasks.determine_search_interal")
-    def test_handler_returns_scenes_from_api(
-            self, mock_determine_interval, mock_task, discovery_class, handler_factory, mock_log_with_context
-    ):
+    @pytest.mark.parametrize("discovery_class", [LandsatContinuousDiscoveryHandler])
+    @patch("src.worker.common.search_interval.datetime")
+    def test_LandsatContinuousDiscoveryHandler_returns_scenes_from_api(
+            self, mock_datetime, mocker, mock_task, discovery_class, handler_factory,
+            mock_log_with_context):
         """
-        Tests LandsatDiscoverHandler and LandsatContinuousDiscoveryHandler
+        Tests LandsatContinuousDiscoveryHandler
         """
 
         # Arrange
         discovery_handler = handler_factory(discovery_class)
 
-        mock_determine_interval.return_value = ("2026-01-01T23:01:00Z", "2026-01-02T00:00:00Z")
-
-        mock_task.get_variable.side_effect = {
-            "datetime_interval": "2026-01-01T23:01:00Z/2026-01-02T00:00:00Z",
-            "collections": "landsat_ot_c2_l2",
-            "bbox":None,
-        }.get
-
         discovery_handler.get_config.side_effect = {
             "enabled": True,
-            "limit": 1000,
-            "timewindow_hours": 2,
+            "page_size": 90,
+            "timewindow_hours": 1,
             "collections":"landsat_ot_c2_l2",
+            "bbox": None,
         }.get
+
+        # mock EngineClient & API Response
+        from operaton.client.engine_client import EngineClient
+        mock_method = mocker.patch.object(EngineClient, 'get_process_instance_history')
+        mock_method.return_value = {"startTime": "2026-01-01T23:01:00Z"}
+
+        # keep real datetime-class for constructors
+        mock_datetime.datetime.side_effect = lambda *args, **kw: datetime.datetime(*args, **kw)
+        mock_datetime.timedelta = datetime.timedelta
 
         # Act
         discovery_handler.execute(mock_task)
@@ -108,19 +110,14 @@ class TestLandsatHandlerApiInteraction:
         assert "usgs:entityId" in first_scene
 
 
-    # todo: download only for one of the discovery handlers?
-    @pytest.mark.e2e_remote_api
-    @pytest.mark.parametrize("discovery_class", [LandsatDiscoverHandler, LandsatContinuousDiscoveryHandler])
-    @patch("src.worker.landsat.tasks.determine_search_interal")
-    def test_handler_downloads_scenes_from_api(
-            self, mock_determine_interval, mock_task, discovery_class, handler_factory, mock_log_with_context, tmp_path
+    @pytest.mark.parametrize("discovery_class", [LandsatDiscoverHandler])
+    def test_LandsatDiscoverHandler_downloads_scenes_from_api(
+            self, mock_task, discovery_class, handler_factory, mock_log_with_context, tmp_path
     ):
-        """Tests LandsatContinuousDiscoveryHandler and LandsatDiscoverHandler for Data Discovery and
-        LandsatDownloadHandler for Data Download e2e."""
+        """Tests LandsatDiscoverHandler for Data Discovery and
+        Data Download e2e."""
         # Arrange
         discovery_handler = handler_factory(discovery_class)
-
-        mock_determine_interval.return_value = ("2026-01-01T23:01:00Z", "2026-01-02T00:00:00Z")
 
         mock_task.get_variable.side_effect = {
             "datetime_interval": "2026-01-01T23:01:00Z/2026-01-02T00:00:00Z",
@@ -128,12 +125,8 @@ class TestLandsatHandlerApiInteraction:
             "bbox":None,
         }.get
 
-        # todo: is set via config (ContDiscHandler) and via variable; simplify approach?
         discovery_handler.get_config.side_effect = {
-            "enabled": True,
-            "limit": 1000,
-            "timewindow_hours": 2,
-            "collections":"landsat_ot_c2_l2",
+            "page_size": 90,
         }.get
 
         # Act
