@@ -4,11 +4,11 @@ import zipfile
 from pathlib import Path
 
 import requests
+from eodag import EODataAccessGateway, EOProduct
 from operaton.external_task.external_task import ExternalTask, TaskResult
 
 from worker.common.datasets import sentinel
 from worker.common.log_utils import configure_logging, format_duration, format_file_metrics, log_with_context
-from worker.common.providers import cdse
 from worker.common.resources import stac
 from worker.common.search_interval import determine_search_interal
 from worker.common.secrets import worker_secrets
@@ -23,9 +23,7 @@ class SentinelDiscoverHandler(TaskHandler):
         Searches for new Sentinel data
 
         Variables needed:
-            start_time
-            stop_time
-            filter
+            collection(s)?
 
         Variables set:
             scenes: List of scenes found
@@ -39,40 +37,68 @@ class SentinelDiscoverHandler(TaskHandler):
 
         log_with_context("Discovering new Sentinel data ...", log_context)
 
-        url = self.get_config("api_url", "https://datahub.creodias.eu/odata/v1")
+        # Process variables
+        param_collections = task.get_variable("collections")
+        param_datetime_interval = task.get_variable("datetime_interval")
+
+        collections = (
+            param_collections.split(",") if param_collections is not None and len(param_collections) > 0 else None
+        )
+
+        start_time, end_time = param_datetime_interval.split("/")
+
         limit = self.get_config("limit", 1000)
 
-        filter_param = task.get_variable("filter")
-        if filter_param is not None and len(filter_param) > 0:
-            filters = [filter_param]
-            log_with_context(f"Search parameter: filter='{filters}'", log_context)
-            try:
-                scenes = cdse.search(
-                    api_url=url,
-                    max_items=limit,
-                    filters=filters,
-                )
-                log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
-                for idx, scene in enumerate(scenes, 1):
-                    log_with_context(f"{idx} {scene['scene_id']}", log_context)
-            except Exception as e:
-                return task.failure(
-                    error_message="Error searching scenes",
-                    error_details=repr(e),
-                    max_retries=3,
-                    retry_timeout=TaskHandler.TIMEOUT_5_MINUTES,
-                )
-
-        else:
+        if collections is None:
             return task.failure(
                 error_message="Missing input variable",
-                error_details="Process input variable 'filter' is mandatory and must have a non-empty value",
+                error_details="Process input variable 'collections' is mandatory and must have a non-empty value",
                 max_retries=0,
                 retry_timeout=0,
             )
 
-        # scenes = []
-        return task.complete(global_variables={"scenes": scenes})
+        scene_essentials = []
+
+        try:
+            dag = EODataAccessGateway()
+            for collection in collections:
+                scenes = dag.search_all(
+                    provider="cop_dataspace",
+                    collection=collection,
+                    published_after=start_time,
+                    published_before=end_time,
+                    limit=limit,
+                )
+
+                log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
+                for idx, scene in enumerate(scenes, 1):
+                    log_with_context(f"{idx} {scene.properties['id']}", log_context)
+
+                    # Strip scenes to essentials
+                    property_keys_template: list[str] = [
+                        "uid",
+                        "usgs:productId",
+                        "usgs:entityId",
+                        "eodag:download_link",
+                    ]
+
+                    payload: dict = {
+                        key: scene.properties.get(key) for key in property_keys_template if key in scene.properties
+                    }
+
+                    payload["eodag:provider"] = scene.provider
+                    payload["id"] = scene.properties["id"]
+                    scene_essentials.append(payload)
+
+        except Exception as e:
+            return task.failure(
+                error_message="Error searching scenes",
+                error_details=repr(e),
+                max_retries=3,
+                retry_timeout=TaskHandler.TIMEOUT_5_MINUTES,
+            )
+
+        return task.complete(global_variables={"scenes": scene_essentials})
 
 
 class SentinelContinuousDiscoveryHandler(TaskHandler):
@@ -92,39 +118,49 @@ class SentinelContinuousDiscoveryHandler(TaskHandler):
             "TOPIC_NAME": task.get_topic_name(),
         }
 
-        if self.get_config("enabled", False):
-            log_with_context("Continous discoveriy of new Sentinel data ...", log_context)
+        scene_essentials = []
 
-            # Handle input variables
-            url = self.get_config("api_url", "https://datahub.creodias.eu/odata/v1")
+        if self.get_config("enabled", False):
+            log_with_context("Continuous discovery of new Sentinel data ...", log_context)
+
+            # Handle config input
             limit = self.get_config("limit", 1000)
             timewindow_hours = self.get_config("timewindow_hours", 1)
-            filter_param = self.get_config("filter", None)
             start_time, end_time = determine_search_interal(task, timewindow_hours)
-
-            filter_base = f"(PublicationDate ge {start_time} and PublicationDate lt {end_time}) and Online eq true"
-            # filters_param = [
-            #    (
-            #        "(startswith(Name,'S1') and (contains(Name,'SLC') or contains(Name,'GRD')) "
-            #        "and not contains(Name,'_COG') and not contains(Name, 'CARD_BS'))&$expand=Attributes"
-            #    ),
-            #    "(startswith(Name,'S2') and contains(Name,'L2A')) and not contains(Name,'_N9999')",
-            #    # ("(startswith(Name,'S2') and (contains(Name,'L1C') or
-            #    # contains(Name,'L2A')) and not contains(Name,'_N9999'))"),
-            #    # "(startswith(Name,'S3A') or startswith(Name,'S3B'))",
-            #    # "(startswith(Name,'S5P') and not contains(Name,'NRTI_'))"
-            # ]
-            if filter_param is not None:
-                filters = [f"({filter_base}) and ({filter_param})"]
-            else:
-                filters = [filter_base]
-            log_with_context(f"Search parameter: filter='{filters}'", log_context)
+            param_collections = self.get_config("collections", "")
+            collections = (
+                param_collections.split(",") if param_collections is not None and len(param_collections) > 0 else None
+            )
 
             try:
-                scenes = cdse.search(api_url=url, max_items=limit, filters=filters)
-                log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
-                for idx, scene in enumerate(scenes, 1):
-                    log_with_context(f"{idx} {scene['scene_id']}", log_context)
+                dag = EODataAccessGateway()
+                for collection in collections:
+                    scenes = dag.search_all(
+                        provider="cop_dataspace",
+                        collection=collection,
+                        published_after=start_time,
+                        published_before=end_time,
+                        limit=limit,
+                    )
+
+                    log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
+                    for idx, scene in enumerate(scenes, 1):
+                        log_with_context(f"{idx} {scene.properties['id']}", log_context)
+
+                        # Strip scenes to essentials
+                        property_keys_template: list[str] = [
+                            "uid",
+                            "usgs:productId",
+                            "usgs:entityId",
+                            "eodag:download_link",
+                        ]
+                        payload: dict = {
+                            key: scene.properties.get(key) for key in property_keys_template if key in scene.properties
+                        }
+                        payload["eodag:provider"] = scene.provider
+                        payload["id"] = scene.properties["id"]
+                        scene_essentials.append(payload)
+
             except Exception as e:
                 return task.failure(
                     error_message="Error searching scenes",
@@ -133,10 +169,9 @@ class SentinelContinuousDiscoveryHandler(TaskHandler):
                     retry_timeout=TaskHandler.TIMEOUT_5_MINUTES,
                 )
         else:
-            log_with_context("Continous discovery is disabled by configuration, skipping ...", log_context)
-            scenes = []
+            log_with_context("Continuous discovery is disabled by configuration, skipping ...", log_context)
 
-        return task.complete(global_variables={"scenes": scenes})
+        return task.complete(global_variables={"scenes": scene_essentials})
 
 
 class SentinelDownloadHandler(TaskHandler):
@@ -151,62 +186,38 @@ class SentinelDownloadHandler(TaskHandler):
 
         scene = task.get_variable("scene")
         log_with_context(f"Input variables: {scene=}", context=log_context, log_level="debug")
-        if "cdse_id" not in scene and "uid" in scene:
-            scene["cdse_id"] = scene["uid"]
 
         # TODO: Calculate scene path according to
         # https://gitlab.dlr.de/terrabyte/data-management/ingestion/terrabyte-ingestion-lib/-/blob/main/
         # terrabyte/ingestion/providers/esa_cdse.py#L241-251
         scene_path = Path(self._get_scene_path(self.get_config("base_dir", "/tmp"), scene))
-        if scene_path.suffix in [".SAFE", ".SEN3"]:
-            scene_path = scene_path.parent / f"{scene['scene_id']}.zip"
 
         if os.path.exists(scene_path):
             log_with_context(f"Skipped download. File {scene_path} already exists", log_context)
         else:
             try:
-                url = f"https://download.dataspace.copernicus.eu/odata/v1/Products({scene['uid']})/$value"
-                access_key = self._get_access_token()
-                headers = {"Authorization": f"Bearer {access_key}"}
+                generic_stac_item: dict = self._create_generic_stac_item(scene["id"])
+                generic_stac_item["properties"].update(scene)
 
-                session = requests.Session()
-                session.headers.update(headers)
-                response = session.get(url, stream=True)
-                response.raise_for_status()
+                eoproduct_scene: EOProduct = EOProduct.from_dict(generic_stac_item)
+
+                dag = EODataAccessGateway()
 
                 scene_path.parent.mkdir(parents=True, exist_ok=True)
                 log_with_context(
-                    f"Downloading {scene['scene_id']} (Size: {scene['ContentLength']}, Destination: {scene_path})",
+                    f"Downloading {scene['id']} (Destination: {scene_path})",
                     log_context,
                 )
-                with scene_path.open(mode="wb") as file:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            file.write(chunk)
-                if scene_path.suffix == ".zip":
-                    if not zipfile.is_zipfile(scene_path):
-                        scene_path.unlink(missing_ok=True)
-                        raise Exception("File downloaded is not a valid zip file, remove file")
-                elif scene_path.suffix == ".nc":
-                    pass
-            except requests.RequestException as e:
-                error_messages = {
-                    404: "Download not found",
-                    403: "Download failed - Access denied",
-                    504: "Download timeout",
-                }
-                status_code = getattr(e.response, "status_code", None)
-                error_msg = error_messages.get(status_code, "Download failed")
-                return task.failure(
-                    error_message="Download failed",
-                    error_details=f"{error_msg} for {url}: {str(e)}",
-                    max_retries=3,
-                    retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
+                dag.download(
+                    product=eoproduct_scene,
+                    extract=False,
+                    output_dir=str(scene_path.parent),
                 )
+
             except Exception as e:
                 return task.failure(
                     error_message="Download failed",
-                    error_details=f"Download failed for {url}: {str(e)}",
+                    error_details=f"Download failed for {scene['id']}: {str(e)}",
                     max_retries=3,
                     retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
                 )
@@ -217,14 +228,13 @@ class SentinelDownloadHandler(TaskHandler):
                 log_context,
             )
 
-        collection = sentinel.get_collection_name(scene["scene_id"])
+        collection = sentinel.get_collection_name(scene["id"])
         log_with_context(f"{collection=}")
-
         return task.complete(global_variables={"zip_file": str(scene_path), "collection": str(collection)})
 
     def _get_scene_path(self, base_dir, scene):
-        s3path = Path(scene["S3Path"].lstrip("/"))
-        return str(Path(base_dir) / s3path)
+        zip_path = Path(scene["id"].lstrip("/") + ".zip")
+        return str(Path(base_dir) / zip_path)
 
     def _get_access_token(self):
         if "token_expire_time" in os.environ and time.time() <= (float(os.environ["token_expire_time"]) - 5):
@@ -300,6 +310,19 @@ class SentinelDownloadHandler(TaskHandler):
                 raise Exception(f"Failed to download from {url}")
 
         return file_path
+
+    @staticmethod
+    def _create_generic_stac_item(_id: str) -> dict:
+        return {
+            "type": "Feature",
+            "stac_version": "1.0.0",
+            "id": f"{_id}",
+            "geometry": {"type": "Point", "coordinates": [0, 0]},
+            "properties": {
+                "title": f"{_id}",
+                "eodag:search_intersection": {"type": "Polygon", "coordinates": [[]]},
+            },
+        }
 
 
 class SentinelUnzipHandler(TaskHandler):

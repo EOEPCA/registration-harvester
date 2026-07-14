@@ -66,18 +66,6 @@ def untar_file(tar_file, remove_tar=True, create_folder=False, base_folder=None)
         return (extract_dir, tar_removed)
 
 
-def check_file_size(expected_file_size, file_path):
-    if os.path.isfile(file_path):
-        actual_file_size = os.path.getsize(file_path)
-        if expected_file_size == actual_file_size:
-            return True
-        else:
-            print(f"Different file sizes - {expected_file_size} expected - {actual_file_size} found")
-            return False
-    else:
-        raise Exception("File not found: {file_path}")
-
-
 def get_file_size(file_path):
     if not os.path.exists(file_path):
         raise Exception("File %s does not exist!" % file_path)
