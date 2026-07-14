@@ -6,13 +6,13 @@ build-backend = "hatchling.build"
 name = "worker"
 version = "2.1.0"
 authors = [
-    { name="Mario Winkler", email="mario.winkler@dlr.de" },
-    { name="Jonas Eberle", email="jonas.eberle@dlr.de" },
-    { name="Markus Kunze", email="markus.kunze@dlr.de" }
+    { name = "Mario Winkler", email = "mario.winkler@dlr.de" },
+    { name = "Jonas Eberle", email = "jonas.eberle@dlr.de" },
+    { name = "Markus Kunze", email = "markus.kunze@dlr.de" }
 ]
 description = "A worker implementation for the EOEPCA Registration BB BPMN workflow engine"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 requires-python = ">=3.12"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -38,8 +38,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "black == 25.12.0",
-    "flake8 == 7.3.0",
     "ruff == 0.15.14"
 ]
 test = [
@@ -64,10 +62,6 @@ log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s.%(msecs)03d %(levelname)s %(message)s"
 log_cli_date_format = "%Y-%m-%dT%H:%M:%S"
-
-[tool.black]
-line-length = 120
-target-version = ["py312"]
 
 [tool.ruff]
 line-length = 120
