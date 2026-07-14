@@ -1,14 +1,15 @@
 import datetime
 import zipfile
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 from operaton.external_task.external_task import ExternalTask
 
-from src.worker.sentinel.tasks import (SentinelContinuousDiscoveryHandler,
-                                       SentinelDiscoverHandler,
-                                       SentinelDownloadHandler)
-
+from src.worker.sentinel.tasks import (
+    SentinelContinuousDiscoveryHandler,
+    SentinelDiscoverHandler,
+    SentinelDownloadHandler,
+)
 
 
 @pytest.fixture
@@ -40,11 +41,13 @@ def mock_log_with_context():
 @pytest.fixture
 def handler_factory(mock_log_with_context):
     """Handler factory"""
+
     def _create(handler_class):
         with patch("src.worker.common.task_handler.TaskHandler.__init__", lambda self: None):
             handler_instance = handler_class(handlers_config={})
             handler_instance.get_config = Mock()
             return handler_instance
+
     return _create
 
 
@@ -56,7 +59,7 @@ class TestSentinelHandlerApiInteraction:
     @pytest.mark.parametrize("discovery_class", [SentinelContinuousDiscoveryHandler])
     @patch("src.worker.common.search_interval.datetime")
     def test_SentinelContinuousDiscoveryHandler_returns_scenes_from_api(
-            self, mock_datetime, mocker, mock_task, handler_factory, discovery_class, mock_log_with_context
+        self, mock_datetime, mocker, mock_task, handler_factory, discovery_class, mock_log_with_context
     ):
         """
         Tests SentinelContinuousDiscoveryHandler
@@ -73,7 +76,8 @@ class TestSentinelHandlerApiInteraction:
 
         # mock EngineClient & API Response
         from operaton.client.engine_client import EngineClient
-        mock_method = mocker.patch.object(EngineClient, 'get_process_instance_history')
+
+        mock_method = mocker.patch.object(EngineClient, "get_process_instance_history")
         mock_method.return_value = {"startTime": "2026-01-01T00:00:00Z"}
 
         # keep real datetime-class for constructors
@@ -113,7 +117,7 @@ class TestSentinelHandlerApiInteraction:
 
     @pytest.mark.parametrize("discovery_class", [SentinelDiscoverHandler])
     def test_SentinelDiscoverHandler_downloads_scenes_from_api(
-            self, mock_task, handler_factory, discovery_class, mock_log_with_context, tmp_path
+        self, mock_task, handler_factory, discovery_class, mock_log_with_context, tmp_path
     ):
         """
         Tests SentinelDiscoverHandler for Data Discovery and
@@ -167,9 +171,7 @@ class TestSentinelHandlerApiInteraction:
         ### Arrange ###
         download_handler = handler_factory(SentinelDownloadHandler)
 
-        mock_task.get_variable.side_effect = {
-            "scene": first_scene
-        }.get
+        mock_task.get_variable.side_effect = {"scene": first_scene}.get
 
         download_handler.get_config.side_effect = {
             "base_dir": str(tmp_path),
@@ -188,10 +190,7 @@ class TestSentinelHandlerApiInteraction:
         assert "collection" in global_vars_download
 
         # check if there is any file
-        downloaded_files = [
-            f for f in tmp_path.rglob("*")
-            if f.is_file() and f.suffix.lower() == ".zip"
-        ]
+        downloaded_files = [f for f in tmp_path.rglob("*") if f.is_file() and f.suffix.lower() == ".zip"]
         assert len(downloaded_files) > 0
 
         # check if file is empty

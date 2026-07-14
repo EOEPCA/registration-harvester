@@ -4,8 +4,8 @@ import zipfile
 from pathlib import Path
 
 import requests
-from operaton.external_task.external_task import ExternalTask, TaskResult
 from eodag import EODataAccessGateway, EOProduct
+from operaton.external_task.external_task import ExternalTask, TaskResult
 
 from worker.common.datasets import sentinel
 from worker.common.log_utils import configure_logging, format_duration, format_file_metrics, log_with_context
@@ -67,19 +67,25 @@ class SentinelDiscoverHandler(TaskHandler):
                     collection=collection,
                     published_after=start_time,
                     published_before=end_time,
-                    limit=limit
+                    limit=limit,
                 )
 
                 log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
                 for idx, scene in enumerate(scenes, 1):
-                    log_with_context(f"{idx} {scene.properties["id"]}", log_context)
+                    log_with_context(f"{idx} {scene.properties['id']}", log_context)
 
                     # Strip scenes to essentials
-                    property_keys_template: list[str] = ["uid", "usgs:productId", "usgs:entityId",
-                                                        "eodag:download_link"]
-                    payload: dict = {key: scene.properties.get(key)
-                                    for key in property_keys_template
-                                    if key in scene.properties}
+                    property_keys_template: list[str] = [
+                        "uid",
+                        "usgs:productId",
+                        "usgs:entityId",
+                        "eodag:download_link",
+                    ]
+
+                    payload: dict = {
+                        key: scene.properties.get(key) for key in property_keys_template if key in scene.properties
+                    }
+
                     payload["eodag:provider"] = scene.provider
                     payload["id"] = scene.properties["id"]
                     scene_essentials.append(payload)
@@ -134,19 +140,23 @@ class SentinelContinuousDiscoveryHandler(TaskHandler):
                         collection=collection,
                         published_after=start_time,
                         published_before=end_time,
-                        limit=limit
+                        limit=limit,
                     )
 
                     log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
                     for idx, scene in enumerate(scenes, 1):
-                        log_with_context(f"{idx} {scene.properties["id"]}", log_context)
+                        log_with_context(f"{idx} {scene.properties['id']}", log_context)
 
                         # Strip scenes to essentials
-                        property_keys_template: list[str] = ["uid", "usgs:productId", "usgs:entityId",
-                                                            "eodag:download_link"]
-                        payload: dict = {key: scene.properties.get(key)
-                                        for key in property_keys_template
-                                        if key in scene.properties}
+                        property_keys_template: list[str] = [
+                            "uid",
+                            "usgs:productId",
+                            "usgs:entityId",
+                            "eodag:download_link",
+                        ]
+                        payload: dict = {
+                            key: scene.properties.get(key) for key in property_keys_template if key in scene.properties
+                        }
                         payload["eodag:provider"] = scene.provider
                         payload["id"] = scene.properties["id"]
                         scene_essentials.append(payload)
@@ -198,7 +208,7 @@ class SentinelDownloadHandler(TaskHandler):
                     f"Downloading {scene['id']} (Destination: {scene_path})",
                     log_context,
                 )
-                paths = dag.download(
+                dag.download(
                     product=eoproduct_scene,
                     extract=False,
                     output_dir=str(scene_path.parent),
@@ -207,7 +217,7 @@ class SentinelDownloadHandler(TaskHandler):
             except Exception as e:
                 return task.failure(
                     error_message="Download failed",
-                    error_details=f"Download failed for {scene["id"]}: {str(e)}",
+                    error_details=f"Download failed for {scene['id']}: {str(e)}",
                     max_retries=3,
                     retry_timeout=TaskHandler.TIMEOUT_1_MINUTE,
                 )
@@ -301,24 +311,16 @@ class SentinelDownloadHandler(TaskHandler):
 
         return file_path
 
-
     @staticmethod
     def _create_generic_stac_item(_id: str) -> dict:
         return {
             "type": "Feature",
             "stac_version": "1.0.0",
             "id": f"{_id}",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [0, 0]
-            },
+            "geometry": {"type": "Point", "coordinates": [0, 0]},
             "properties": {
                 "title": f"{_id}",
-                "eodag:search_intersection": {
-                    "type": "Polygon",
-                    "coordinates": [[
-                    ]]
-                },
+                "eodag:search_intersection": {"type": "Polygon", "coordinates": [[]]},
             },
         }
 

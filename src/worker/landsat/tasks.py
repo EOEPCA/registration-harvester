@@ -1,9 +1,8 @@
-import json
 import os
 from pathlib import Path
 
-from operaton.external_task.external_task import ExternalTask, TaskResult
 from eodag import EODataAccessGateway, EOProduct
+from operaton.external_task.external_task import ExternalTask, TaskResult
 
 from worker.common.base.file import untar_file
 from worker.common.datasets import landsat
@@ -55,9 +54,7 @@ class LandsatDiscoverHandler(TaskHandler):
         start_time, end_time = param_datetime_interval.split("/")
 
         ingest_filter = {"start": start_time, "end": end_time}
-        scene_filter_input = {
-            "ingestFilter": ingest_filter
-        }
+        scene_filter_input = {"ingestFilter": ingest_filter}
 
         if collections is None:
             return task.failure(
@@ -98,11 +95,15 @@ class LandsatDiscoverHandler(TaskHandler):
                     log_with_context(f"{idx} {scene.properties['id']}", log_context)
 
                     # Strip scenes to essentials
-                    property_keys_template: list[str] = ["uid", "usgs:productId", "usgs:entityId",
-                                                         "eodag:download_link"]
-                    payload: dict = {key: scene.properties.get(key)
-                                     for key in property_keys_template
-                                     if key in scene.properties}
+                    property_keys_template: list[str] = [
+                        "uid",
+                        "usgs:productId",
+                        "usgs:entityId",
+                        "eodag:download_link",
+                    ]
+                    payload: dict = {
+                        key: scene.properties.get(key) for key in property_keys_template if key in scene.properties
+                    }
                     payload["eodag:provider"] = scene.provider
                     payload["id"] = scene.properties["id"]
                     scene_essentials.append(payload)
@@ -158,9 +159,7 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
             start_time, end_time = determine_search_interal(task, timewindow_hours)
 
             ingest_filter = {"start": start_time, "end": end_time}
-            scene_filter_input = {
-                "ingestFilter": ingest_filter
-            }
+            scene_filter_input = {"ingestFilter": ingest_filter}
 
             log_with_context(f"Search parameter: collections={collections}", log_context)
             log_with_context(f"Search parameter: bbox='{bbox}'", log_context)
@@ -178,14 +177,18 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
 
                     log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
                     for idx, scene in enumerate(scenes, 1):
-                        log_with_context(f"{idx} {scene.properties["id"]}", log_context)
+                        log_with_context(f"{idx} {scene.properties['id']}", log_context)
 
                         # Strip scenes to essentials
-                        property_keys_template: list[str] = ["uid", "usgs:productId", "usgs:entityId",
-                                                             "eodag:download_link"]
-                        payload: dict = {key: scene.properties.get(key)
-                                         for key in property_keys_template
-                                         if key in scene.properties}
+                        property_keys_template: list[str] = [
+                            "uid",
+                            "usgs:productId",
+                            "usgs:entityId",
+                            "eodag:download_link",
+                        ]
+                        payload: dict = {
+                            key: scene.properties.get(key) for key in property_keys_template if key in scene.properties
+                        }
                         payload["eodag:provider"] = scene.provider
                         payload["id"] = scene.properties["id"]
                         scene_essentials.append(payload)
@@ -225,7 +228,7 @@ class LandsatDownloadHandler(TaskHandler):
 
         scene = task.get_variable("scene")
 
-        log_with_context("Downloading scene %s" % (scene['id']), log_context)
+        log_with_context("Downloading scene %s" % (scene["id"]), log_context)
 
         base_dir = self.get_config("download_base_dir", "/tmp")
         temp_dir = landsat.get_scene_id_folder(scene["id"])
@@ -246,11 +249,11 @@ class LandsatDownloadHandler(TaskHandler):
                 dag = EODataAccessGateway()
 
                 Path(file_path).parent.mkdir(parents=True, exist_ok=True)
-                paths = dag.download(
+                dag.download(
                     product=eoproduct_scene,
                     extract=False,
                     output_dir=Path(file_path).parent,
-                    timeout=10 # 10min is eodag default
+                    timeout=10,  # 10min is eodag default
                 )
 
             except Exception as e:
@@ -277,17 +280,10 @@ class LandsatDownloadHandler(TaskHandler):
             "type": "Feature",
             "stac_version": "1.0.0",
             "id": f"{_id}",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [0, 0]
-            },
+            "geometry": {"type": "Point", "coordinates": [0, 0]},
             "properties": {
                 "title": f"{_id}",
-                "eodag:search_intersection": {
-                    "type": "Polygon",
-                    "coordinates": [[
-                    ]]
-                },
+                "eodag:search_intersection": {"type": "Polygon", "coordinates": [[]]},
             },
         }
 
