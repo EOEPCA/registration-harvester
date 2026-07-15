@@ -476,6 +476,17 @@ class StacItemHandler(TaskHandler):
             item.add_link(link=Link(rel=RelType.PARENT, target=collection_link))
             item.add_link(link=Link(rel=RelType.SELF, target=self_link))
             item.add_link(link=Link(rel=RelType.COLLECTION, target=collection_link))
+
+            # Validate item
+            # Since the item id is part of the URL, it must not contain any reserved characters defined in RFC 3986
+            # see https://datatracker.ietf.org/doc/html/rfc3986#section-2.2
+            reserved_characters = set("/:?#[]@")
+            if not bool(set(item.id) & reserved_characters):
+                log_with_context(f"Item id contains reserved character: {item.id}", log_context)
+                replacements = str.maketrans({c: "_" for c in reserved_characters})
+                item.id = item.id.translate(replacements)
+                log_with_context(f"Validated item id to {item.id}", log_context)
+
             for item_loaded in load_stac_api_items(
                 url=stac_api_destination_url,
                 items=[item],
