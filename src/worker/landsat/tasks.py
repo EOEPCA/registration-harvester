@@ -233,6 +233,12 @@ class LandsatDownloadHandler(TaskHandler):
         base_dir = self.get_config("download_base_dir", "/tmp")
         temp_dir = landsat.get_scene_id_folder(scene["id"])
         download_dir = os.path.join(base_dir, temp_dir)
+        download_retry_wait_time_minutes = self.get_config("download_retry_wait_time_minutes", 0.2)
+        download_retry_timeout_minutes = self.get_config("download_retry_timeout_minutes", 10)
+        log_with_context(
+            f"Download parameter: dir={download_dir} wait={download_retry_wait_time_minutes} timeout={download_retry_timeout_minutes}",
+            log_context,
+        )
         file_path = str(os.path.join(download_dir, f"{scene['id']}.tar.gz"))
 
         if os.path.exists(file_path):
@@ -253,7 +259,8 @@ class LandsatDownloadHandler(TaskHandler):
                     product=eoproduct_scene,
                     extract=False,
                     output_dir=Path(file_path).parent,
-                    timeout=10,  # 10min is eodag default
+                    wait=download_retry_wait_time_minutes,
+                    timeout=download_retry_timeout_minutes,
                 )
 
             except Exception as e:

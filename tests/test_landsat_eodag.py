@@ -1,12 +1,11 @@
 import datetime
-import os
 import tarfile
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from operaton.external_task.external_task import ExternalTask
 
-from src.worker.landsat.tasks import LandsatContinuousDiscoveryHandler, LandsatDiscoverHandler, LandsatDownloadHandler
+from worker.landsat.tasks import LandsatContinuousDiscoveryHandler, LandsatDiscoverHandler, LandsatDownloadHandler
 
 
 @pytest.fixture
@@ -31,7 +30,7 @@ def mock_log_with_context():
     """
     Mocks logging to prevent from side effects.
     """
-    with patch("src.worker.landsat.tasks.log_with_context") as mock:
+    with patch("worker.landsat.tasks.log_with_context") as mock:
         yield mock
 
 
@@ -40,8 +39,8 @@ def handler_factory(mock_log_with_context):
     """Handler factory"""
 
     def _create(handler_class):
-        with patch("src.worker.common.task_handler.TaskHandler.__init__", lambda self: None):
-            handler_instance = handler_class(handlers_config={})
+        with patch("worker.common.task_handler.TaskHandler.__init__", lambda self: None):
+            handler_instance = handler_class()
             handler_instance.get_config = Mock()
             return handler_instance
 
@@ -54,7 +53,7 @@ class TestLandsatHandlerApiInteraction:
     """
 
     @pytest.mark.parametrize("discovery_class", [LandsatContinuousDiscoveryHandler])
-    @patch("src.worker.common.search_interval.datetime")
+    @patch("worker.common.search_interval.datetime")
     def test_LandsatContinuousDiscoveryHandler_returns_scenes_from_api(
         self, mock_datetime, mocker, mock_task, discovery_class, handler_factory, mock_log_with_context
     ):
@@ -67,17 +66,17 @@ class TestLandsatHandlerApiInteraction:
 
         discovery_handler.get_config.side_effect = {
             "enabled": True,
-            "page_size": 90,
+            "page_size": 100,
             "timewindow_hours": 1,
+            "bbox": "8,40,18,60",
             "collections": "landsat_ot_c2_l2",
-            "bbox": None,
         }.get
 
         # mock EngineClient & API Response
         from operaton.client.engine_client import EngineClient
 
         mock_method = mocker.patch.object(EngineClient, "get_process_instance_history")
-        mock_method.return_value = {"startTime": "2026-01-01T23:01:00Z"}
+        mock_method.return_value = {"startTime": "2026-01-02T00:01:00Z"}
 
         # keep real datetime-class for constructors
         mock_datetime.datetime.side_effect = lambda *args, **kw: datetime.datetime(*args, **kw)
@@ -119,13 +118,13 @@ class TestLandsatHandlerApiInteraction:
         discovery_handler = handler_factory(discovery_class)
 
         mock_task.get_variable.side_effect = {
-            "datetime_interval": "2026-01-01T23:01:00Z/2026-01-02T00:00:00Z",
+            "datetime_interval": "2026-01-01T23:00:00Z/2026-01-02T00:00:00Z",
             "collections": "landsat_ot_c2_l2",
-            "bbox": None,
+            "bbox": "8,40,18,60",
         }.get
 
         discovery_handler.get_config.side_effect = {
-            "page_size": 90,
+            "page_size": 100,
         }.get
 
         # Act
@@ -162,6 +161,8 @@ class TestLandsatHandlerApiInteraction:
 
         download_handler.get_config.side_effect = {
             "download_base_dir": str(tmp_path),
+            "download_retry_wait_time_minutes": 1,
+            "download_retry_timeout_minutes": 60,
         }.get
 
         ### Act ###
