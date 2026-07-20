@@ -23,12 +23,6 @@ topics:
     lock_duration: 1800000  # 30 minutes
     workers: 1
     parallel_tasks: 1
-  landsat_get_download_urls:
-    module: worker.landsat.tasks
-    handler: LandsatGetDownloadUrlHandler
-    lock_duration: 300000  # 5 minutes
-    workers: 1
-    parallel_tasks: 1
   landsat_download_scene:
     module: worker.landsat.tasks
     handler: LandsatDownloadHandler
