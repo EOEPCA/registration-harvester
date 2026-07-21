@@ -40,14 +40,16 @@ class SentinelDiscoverHandler(TaskHandler):
         # Process variables
         param_collections = task.get_variable("collections")
         param_datetime_interval = task.get_variable("datetime_interval")
+        param_bbox = task.get_variable("bbox")
 
         collections = (
             param_collections.split(",") if param_collections is not None and len(param_collections) > 0 else None
         )
+        bbox = param_bbox.split(",") if param_bbox is not None and len(param_bbox) > 0 else None
 
         start_time, end_time = param_datetime_interval.split("/")
 
-        limit = self.get_config("limit", 1000)
+        page_size = self.get_config("page_size", 1000)
 
         if collections is None:
             return task.failure(
@@ -65,9 +67,10 @@ class SentinelDiscoverHandler(TaskHandler):
                 scenes = dag.search_all(
                     provider="cop_dataspace",
                     collection=collection,
+                    bbox=bbox,
                     published_after=start_time,
                     published_before=end_time,
-                    limit=limit,
+                    limit=page_size,
                 )
 
                 log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
@@ -124,13 +127,15 @@ class SentinelContinuousDiscoveryHandler(TaskHandler):
             log_with_context("Continuous discovery of new Sentinel data ...", log_context)
 
             # Handle config input
-            limit = self.get_config("limit", 1000)
+            page_size = self.get_config("page_size", 1000)
             timewindow_hours = self.get_config("timewindow_hours", 1)
             start_time, end_time = determine_search_interal(task, timewindow_hours)
             param_collections = self.get_config("collections", "")
             collections = (
                 param_collections.split(",") if param_collections is not None and len(param_collections) > 0 else None
             )
+            param_bbox = self.get_config("bbox", "")
+            bbox = param_bbox.split(",") if param_bbox is not None and len(param_bbox) > 0 else None
 
             try:
                 dag = EODataAccessGateway()
@@ -138,9 +143,10 @@ class SentinelContinuousDiscoveryHandler(TaskHandler):
                     scenes = dag.search_all(
                         provider="cop_dataspace",
                         collection=collection,
+                        bbox=bbox,
                         published_after=start_time,
                         published_before=end_time,
-                        limit=limit,
+                        limit=page_size,
                     )
 
                     log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
@@ -190,7 +196,9 @@ class SentinelDownloadHandler(TaskHandler):
         # TODO: Calculate scene path according to
         # https://gitlab.dlr.de/terrabyte/data-management/ingestion/terrabyte-ingestion-lib/-/blob/main/
         # terrabyte/ingestion/providers/esa_cdse.py#L241-251
-        scene_path = Path(self._get_scene_path(self.get_config("base_dir", "/tmp"), scene))
+        scene_path = Path(self._get_scene_path(self.get_config("download_base_dir", "/tmp"), scene))
+        download_retry_wait_time_minutes = self.get_config("download_retry_wait_time_minutes", 0.2)
+        download_retry_timeout_minutes = self.get_config("download_retry_timeout_minutes", 10)
 
         if os.path.exists(scene_path):
             log_with_context(f"Skipped download. File {scene_path} already exists", log_context)
@@ -212,6 +220,8 @@ class SentinelDownloadHandler(TaskHandler):
                     product=eoproduct_scene,
                     extract=False,
                     output_dir=str(scene_path.parent),
+                    wait=download_retry_wait_time_minutes,
+                    timeout=download_retry_timeout_minutes,
                 )
 
             except Exception as e:
@@ -482,6 +492,9 @@ class SentinelRegisterMetadataHandler(TaskHandler):
         api_ca_cert = self.get_config("stac_api_ca_cert", None)
         file_deletion = self.get_config("stac_file_deletion", True)
 
+        # Asset href rewriting
+        rewrite_asset_hrefs = self.get_config("rewrite_asset_hrefs", None)
+
         # get job variables
         scene = task.get_variable("scene")
         collection = task.get_variable("collection")
@@ -496,16 +509,19 @@ class SentinelRegisterMetadataHandler(TaskHandler):
                 retry_timeout=0,
             )
 
-        # Asset href rewriting
-        rewrite_asset_hrefs = self.get_config("rewrite_asset_hrefs", None)
-
         try:
+            token = None
+            if self.iam_client is not None:
+                # Get token to access protected endpoints of catalog
+                token = self.iam_client.get_access_token()
+
             stac.register_metadata(
                 stac_file=stac_item,
                 collection=collection,
                 api_url=api_url,
                 api_user=api_user,
                 api_pw=api_pw,
+                api_token=token,
                 api_ca_cert=api_ca_cert,
                 file_deletion=file_deletion,
                 rewrite_asset_hrefs=rewrite_asset_hrefs,

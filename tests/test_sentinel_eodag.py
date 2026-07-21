@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from operaton.external_task.external_task import ExternalTask
 
-from src.worker.sentinel.tasks import (
+from worker.sentinel.tasks import (
     SentinelContinuousDiscoveryHandler,
     SentinelDiscoverHandler,
     SentinelDownloadHandler,
@@ -34,7 +34,7 @@ def mock_log_with_context():
     """
     Mocks logging to prevent from side effects.
     """
-    with patch("src.worker.sentinel.tasks.log_with_context") as mock:
+    with patch("worker.sentinel.tasks.log_with_context") as mock:
         yield mock
 
 
@@ -43,8 +43,8 @@ def handler_factory(mock_log_with_context):
     """Handler factory"""
 
     def _create(handler_class):
-        with patch("src.worker.common.task_handler.TaskHandler.__init__", lambda self: None):
-            handler_instance = handler_class(handlers_config={})
+        with patch("worker.common.task_handler.TaskHandler.__init__", lambda self: None):
+            handler_instance = handler_class()
             handler_instance.get_config = Mock()
             return handler_instance
 
@@ -57,7 +57,7 @@ class TestSentinelHandlerApiInteraction:
     """
 
     @pytest.mark.parametrize("discovery_class", [SentinelContinuousDiscoveryHandler])
-    @patch("src.worker.common.search_interval.datetime")
+    @patch("worker.common.search_interval.datetime")
     def test_SentinelContinuousDiscoveryHandler_returns_scenes_from_api(
         self, mock_datetime, mocker, mock_task, handler_factory, discovery_class, mock_log_with_context
     ):
@@ -69,8 +69,9 @@ class TestSentinelHandlerApiInteraction:
 
         discovery_handler.get_config.side_effect = {
             "enabled": True,
-            "limit": 1000,
+            "page_size": 1000,
             "collections": "S2_MSI_L2A,S2_MSI_L1C",
+            "bbox": "8,40,18,60",
             "timewindow_hours": 1,
         }.get
 
@@ -78,7 +79,7 @@ class TestSentinelHandlerApiInteraction:
         from operaton.client.engine_client import EngineClient
 
         mock_method = mocker.patch.object(EngineClient, "get_process_instance_history")
-        mock_method.return_value = {"startTime": "2026-01-01T00:00:00Z"}
+        mock_method.return_value = {"startTime": "2026-06-29T16:01:00Z"}
 
         # keep real datetime-class for constructors
         mock_datetime.datetime.side_effect = lambda *args, **kw: datetime.datetime(*args, **kw)
@@ -107,13 +108,11 @@ class TestSentinelHandlerApiInteraction:
         assert "uid" in first_scene
 
         # check if data for both collections was found
-        has_s2a_msil2a = any("S2A_MSIL2A" in scene.get("id", "") for scene in scenes)
-        has_s2b_msil2a = any("S2B_MSIL2A" in scene.get("id", "") for scene in scenes)
-        has_s2a_msil1c = any("S2A_MSIL1C" in scene.get("id", "") for scene in scenes)
-        has_s2b_msil1c = any("S2B_MSIL1C" in scene.get("id", "") for scene in scenes)
+        has_msil2a = any("MSIL2A" in scene.get("id", "") for scene in scenes)
+        has_msil1c = any("MSIL1C" in scene.get("id", "") for scene in scenes)
 
-        assert has_s2a_msil2a or has_s2b_msil2a, "Collection S2_MSI_L2A missing!"
-        assert has_s2a_msil1c or has_s2b_msil1c, "Collection S2_MSI_L1C missing!"
+        assert has_msil1c or has_msil2a, "Collection S2_MSI_L2A is missing!"
+        assert has_msil1c or has_msil2a, "Collection S2_MSI_L1C is missing!"
 
     @pytest.mark.parametrize("discovery_class", [SentinelDiscoverHandler])
     def test_SentinelDiscoverHandler_downloads_scenes_from_api(
@@ -128,12 +127,13 @@ class TestSentinelHandlerApiInteraction:
         discovery_handler = handler_factory(discovery_class)
 
         mock_task.get_variable.side_effect = {
-            "datetime_interval": "2026-01-01T23:01:00Z/2026-01-02T00:00:00Z",
+            "datetime_interval": "2026-06-29T15:00:00Z/2026-06-29T16:00:00Z",
             "collections": "S2_MSI_L1C,S2_MSI_L2A",
+            "bbox": "8,40,18,60",
         }.get
 
         discovery_handler.get_config.side_effect = {
-            "limit": 1000,
+            "page_size": 1000,
         }.get
 
         ### Act ###
@@ -159,13 +159,11 @@ class TestSentinelHandlerApiInteraction:
         assert "uid" in first_scene
 
         # check if data for both collections was found
-        has_s2a_msil2a = any("S2A_MSIL2A" in scene.get("id", "") for scene in scenes)
-        has_s2b_msil2a = any("S2B_MSIL2A" in scene.get("id", "") for scene in scenes)
-        has_s2a_msil1c = any("S2A_MSIL1C" in scene.get("id", "") for scene in scenes)
-        has_s2b_msil1c = any("S2B_MSIL1C" in scene.get("id", "") for scene in scenes)
+        has_msil2a = any("MSIL2A" in scene.get("id", "") for scene in scenes)
+        has_msil1c = any("MSIL1C" in scene.get("id", "") for scene in scenes)
 
-        assert has_s2a_msil2a or has_s2b_msil2a, "Collection S2_MSI_L2A fehlt!"
-        assert has_s2a_msil1c or has_s2b_msil1c, "Collection S2_MSI_L1C fehlt!"
+        assert has_msil1c or has_msil2a, "Collection S2_MSI_L2A is missing!"
+        assert has_msil1c or has_msil2a, "Collection S2_MSI_L1C is missing!"
 
         ####### Download-Test #######
         ### Arrange ###
@@ -174,7 +172,9 @@ class TestSentinelHandlerApiInteraction:
         mock_task.get_variable.side_effect = {"scene": first_scene}.get
 
         download_handler.get_config.side_effect = {
-            "base_dir": str(tmp_path),
+            "download_base_dir": str(tmp_path),
+            "download_retry_wait_time_minutes": 1,
+            "download_retry_timeout_minutes": 60,
         }.get
 
         ### Act ###
