@@ -92,7 +92,7 @@ class LandsatDiscoverHandler(TaskHandler):
                 log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
 
                 for idx, scene in enumerate(scenes, 1):
-                    log_with_context(f"{idx} {scene.properties['id']}", log_context)
+                    # log_with_context(f"{idx} {scene.properties['id']}", log_context)
 
                     # Strip scenes to essentials
                     property_keys_template: list[str] = [
@@ -177,7 +177,7 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
 
                     log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
                     for idx, scene in enumerate(scenes, 1):
-                        log_with_context(f"{idx} {scene.properties['id']}", log_context)
+                        # log_with_context(f"{idx} {scene.properties['id']}", log_context)
 
                         # Strip scenes to essentials
                         property_keys_template: list[str] = [
