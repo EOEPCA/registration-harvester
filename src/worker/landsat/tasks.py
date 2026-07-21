@@ -426,10 +426,12 @@ class LandsatRegisterMetadataHandler(TaskHandler):
                 retry_timeout=0,
             )
 
-        # Get token to access protected endpoints of catalog
-        token = self.iam_client.get_access_token()
-
         try:
+            token = None
+            if self.iam_client is not None:
+                # Get token to access protected endpoints of catalog
+                token = self.iam_client.get_access_token()
+
             stac.register_metadata(
                 stac_file=scene_stac_file,
                 collection=scene["collection"],
