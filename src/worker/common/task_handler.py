@@ -15,18 +15,16 @@ class TaskHandler:
         self.config_all = handlers_config.get(handler_name, {})
 
         # IAM client
-        iam_client_id = worker_secrets.get_secret("iam_client_id", None)
-        iam_client_secret = worker_secrets.get_secret("iam_client_secret", None)
-        iam_oidc_token_endpoint_url = "https://iam-auth.develop.eoepca.org/realms/eoepca/protocol/openid-connect/token"
+        self.iam_client = None
         iam_config = worker_config.get_all().get("iam")
-        if iam_config is not None:
-            token_url = iam_config.get("oidc_token_endpoint_url")
-            if token_url is not None:
-                iam_oidc_token_endpoint_url = token_url
-
-        self.iam_client = IAMClient(
-            token_endpoint_url=iam_oidc_token_endpoint_url, client_id=iam_client_id, client_secret=iam_client_secret
-        )
+        if iam_config is not None and iam_config.get("enabled", False):
+            iam_client_id = worker_secrets.get_secret("iam_client_id", None)
+            iam_client_secret = worker_secrets.get_secret("iam_client_secret", None)
+            token_url = iam_config.get("oidc_token_endpoint_url", None)
+            if token_url is not None and iam_client_id is not None and iam_client_secret is not None:
+                self.iam_client = IAMClient(
+                    token_endpoint_url=token_url, client_id=iam_client_id, client_secret=iam_client_secret
+                )
 
     def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         raise NotImplementedError
