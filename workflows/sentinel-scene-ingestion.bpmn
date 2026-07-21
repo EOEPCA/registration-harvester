@@ -22,37 +22,25 @@
       <bpmn:incoming>Flow_07az1q0</bpmn:incoming>
       <bpmn:outgoing>Flow_07ye5k2</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:exclusiveGateway id="Gateway_1i2o6lt">
-      <bpmn:incoming>Flow_07ye5k2</bpmn:incoming>
-      <bpmn:outgoing>Flow_1a2vk5a</bpmn:outgoing>
-      <bpmn:outgoing>Flow_1f8o5vr</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
-    <bpmn:sequenceFlow id="Flow_07ye5k2" sourceRef="sentinel_check_integrity" targetRef="Gateway_1i2o6lt" />
-    <bpmn:sequenceFlow id="Flow_1a2vk5a" sourceRef="Gateway_1i2o6lt" targetRef="sentinel_extract_metadata">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{S(scene).prop("collection").stringValue() != ""}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_07ye5k2" sourceRef="sentinel_check_integrity" targetRef="sentinel_extract_metadata" />
     <bpmn:serviceTask id="sentinel_extract_metadata" name="Extract Metadata" camunda:asyncAfter="true" camunda:type="external" camunda:topic="sentinel_extract_metadata">
-      <bpmn:incoming>Flow_1a2vk5a</bpmn:incoming>
+      <bpmn:incoming>Flow_07ye5k2</bpmn:incoming>
       <bpmn:outgoing>Flow_0d6m1mi</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:sequenceFlow id="Flow_0d6m1mi" sourceRef="sentinel_extract_metadata" targetRef="sentinel_register_metadata" />
     <bpmn:serviceTask id="sentinel_register_metadata" name="Register Metadata" camunda:asyncAfter="true" camunda:type="external" camunda:topic="sentinel_register_metadata">
       <bpmn:incoming>Flow_0d6m1mi</bpmn:incoming>
       <bpmn:outgoing>Flow_0es6yjm</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:endEvent id="Event_1j51gik">
       <bpmn:incoming>Flow_0es6yjm</bpmn:incoming>
-      <bpmn:incoming>Flow_1f8o5vr</bpmn:incoming>
     </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0d6m1mi" sourceRef="sentinel_extract_metadata" targetRef="sentinel_register_metadata" />
     <bpmn:sequenceFlow id="Flow_0es6yjm" sourceRef="sentinel_register_metadata" targetRef="Event_1j51gik" />
-    <bpmn:sequenceFlow id="Flow_1f8o5vr" name="if no collection given, skip metadata part" sourceRef="Gateway_1i2o6lt" targetRef="Event_1j51gik">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{S(scene).prop("collection").stringValue() == ""}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_11emlyv">
       <bpmndi:BPMNShape id="Participant_17pt1rw_di" bpmnElement="Pool_1" isHorizontal="true">
-        <dc:Bounds x="160" y="82" width="1230" height="288" />
+        <dc:Bounds x="160" y="82" width="1110" height="248" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
@@ -72,19 +60,16 @@
         <dc:Bounds x="660" y="167" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Gateway_1i2o6lt_di" bpmnElement="Gateway_1i2o6lt" isMarkerVisible="true">
-        <dc:Bounds x="825" y="182" width="50" height="50" />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_0ikd1yi_di" bpmnElement="sentinel_extract_metadata">
-        <dc:Bounds x="940" y="167" width="100" height="80" />
+        <dc:Bounds x="820" y="167" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_0dom1fl_di" bpmnElement="sentinel_register_metadata">
-        <dc:Bounds x="1110" y="167" width="100" height="80" />
+        <dc:Bounds x="990" y="167" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_1j51gik_di" bpmnElement="Event_1j51gik">
-        <dc:Bounds x="1282" y="189" width="36" height="36" />
+        <dc:Bounds x="1162" y="189" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_0bhhyxl_di" bpmnElement="Flow_0bhhyxl">
         <di:waypoint x="285" y="207" />
@@ -100,28 +85,15 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_07ye5k2_di" bpmnElement="Flow_07ye5k2">
         <di:waypoint x="760" y="207" />
-        <di:waypoint x="825" y="207" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_1a2vk5a_di" bpmnElement="Flow_1a2vk5a">
-        <di:waypoint x="875" y="207" />
-        <di:waypoint x="940" y="207" />
+        <di:waypoint x="820" y="207" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0d6m1mi_di" bpmnElement="Flow_0d6m1mi">
-        <di:waypoint x="1040" y="207" />
-        <di:waypoint x="1110" y="207" />
+        <di:waypoint x="920" y="207" />
+        <di:waypoint x="990" y="207" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0es6yjm_di" bpmnElement="Flow_0es6yjm">
-        <di:waypoint x="1210" y="207" />
-        <di:waypoint x="1282" y="207" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_1f8o5vr_di" bpmnElement="Flow_1f8o5vr">
-        <di:waypoint x="850" y="232" />
-        <di:waypoint x="850" y="320" />
-        <di:waypoint x="1300" y="320" />
-        <di:waypoint x="1300" y="225" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1040" y="270" width="70" height="40" />
-        </bpmndi:BPMNLabel>
+        <di:waypoint x="1090" y="207" />
+        <di:waypoint x="1162" y="207" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

@@ -28,16 +28,22 @@
     <bpmn:sequenceFlow id="Flow_0pdlcz5" sourceRef="sentinel_ondemand_discovery" targetRef="Gateway_11p37gr" />
     <bpmn:sequenceFlow id="Flow_1xx1ah2" sourceRef="sentinel_continuous_discovery" targetRef="Gateway_11p37gr" />
     <bpmn:sequenceFlow id="Flow_1k4n5o7" name="scenes found" sourceRef="Gateway_11p37gr" targetRef="sentinel_scene_ingestion">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{!S(scenes).elements().isEmpty()}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${scenes.size() &gt; 0}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_0kbc8tw" sourceRef="sentinel_scene_ingestion" targetRef="Event_1guz2an" />
     <bpmn:sequenceFlow id="Flow_0cmgyn1" name="no scenes found" sourceRef="Gateway_11p37gr" targetRef="Event_1guz2an">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{S(scenes).elements().isEmpty()}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${scenes.size() == 0}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:endEvent id="Event_1guz2an">
       <bpmn:incoming>Flow_0kbc8tw</bpmn:incoming>
       <bpmn:incoming>Flow_0cmgyn1</bpmn:incoming>
     </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="Gateway_11p37gr">
+      <bpmn:incoming>Flow_0pdlcz5</bpmn:incoming>
+      <bpmn:incoming>Flow_1xx1ah2</bpmn:incoming>
+      <bpmn:outgoing>Flow_1k4n5o7</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0cmgyn1</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
     <bpmn:callActivity id="sentinel_scene_ingestion" name="Sentinel Scene Ingestion" calledElement="sentinel-scene-ingestion">
       <bpmn:extensionElements>
         <camunda:in source="scene" target="scene" />
@@ -46,12 +52,6 @@
       <bpmn:outgoing>Flow_0kbc8tw</bpmn:outgoing>
       <bpmn:multiInstanceLoopCharacteristics camunda:asyncAfter="true" camunda:collection="${scenes}" camunda:elementVariable="scene" />
     </bpmn:callActivity>
-    <bpmn:exclusiveGateway id="Gateway_11p37gr">
-      <bpmn:incoming>Flow_0pdlcz5</bpmn:incoming>
-      <bpmn:incoming>Flow_1xx1ah2</bpmn:incoming>
-      <bpmn:outgoing>Flow_1k4n5o7</bpmn:outgoing>
-      <bpmn:outgoing>Flow_0cmgyn1</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_062u33n">
@@ -81,11 +81,11 @@
       <bpmndi:BPMNShape id="Event_1guz2an_di" bpmnElement="Event_1guz2an">
         <dc:Bounds x="892" y="272" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_0mzns4m_di" bpmnElement="sentinel_scene_ingestion">
-        <dc:Bounds x="700" y="250" width="100" height="80" />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_11p37gr_di" bpmnElement="Gateway_11p37gr" isMarkerVisible="true">
         <dc:Bounds x="535" y="265" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0mzns4m_di" bpmnElement="sentinel_scene_ingestion">
+        <dc:Bounds x="715" y="250" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_0ek6gn8_di" bpmnElement="Flow_0ek6gn8">
         <di:waypoint x="308" y="180" />
@@ -106,13 +106,13 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1k4n5o7_di" bpmnElement="Flow_1k4n5o7">
         <di:waypoint x="585" y="290" />
-        <di:waypoint x="700" y="290" />
+        <di:waypoint x="715" y="290" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="610" y="272" width="66" height="14" />
+          <dc:Bounds x="607" y="271" width="66" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0kbc8tw_di" bpmnElement="Flow_0kbc8tw">
-        <di:waypoint x="800" y="290" />
+        <di:waypoint x="815" y="290" />
         <di:waypoint x="892" y="290" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0cmgyn1_di" bpmnElement="Flow_0cmgyn1">
@@ -121,7 +121,7 @@
         <di:waypoint x="910" y="410" />
         <di:waypoint x="910" y="308" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="695" y="392" width="81" height="14" />
+          <dc:Bounds x="599" y="391" width="81" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
