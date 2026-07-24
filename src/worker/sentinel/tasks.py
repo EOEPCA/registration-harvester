@@ -454,7 +454,8 @@ class SentinelRegisterMetadataHandler(TaskHandler):
                 file_deletion=file_deletion,
                 rewrite_asset_hrefs=rewrite_asset_hrefs,
             )
-            task.complete()
+            return task.complete()
+
         except Exception as e:
             return task.failure(
                 error_message="Error registering metadata",
