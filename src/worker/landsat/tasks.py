@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from eodag import EODataAccessGateway, EOProduct
+from eodag import EODataAccessGateway, EOProduct, setup_logging
 from operaton.external_task.external_task import ExternalTask, TaskResult
 
 from worker.common.base.file import untar_file
@@ -249,12 +249,12 @@ class LandsatDownloadHandler(TaskHandler):
 
                 generic_stac_item: dict = self._create_generic_stac_item(scene["id"])
                 generic_stac_item["properties"].update(scene)
-
                 eoproduct_scene: EOProduct = EOProduct.from_dict(generic_stac_item)
-
-                dag = EODataAccessGateway()
-
                 Path(file_path).parent.mkdir(parents=True, exist_ok=True)
+
+                # disable eodag progress bar logging
+                setup_logging(verbose=2, no_progress_bar=True)
+                dag = EODataAccessGateway()
                 dag.download(
                     product=eoproduct_scene,
                     extract=False,

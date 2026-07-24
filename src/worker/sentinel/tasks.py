@@ -3,7 +3,7 @@ import time
 import zipfile
 from pathlib import Path
 
-from eodag import EODataAccessGateway, EOProduct
+from eodag import EODataAccessGateway, EOProduct, setup_logging
 from operaton.external_task.external_task import ExternalTask, TaskResult
 
 from worker.common.datasets import sentinel
@@ -202,18 +202,19 @@ class SentinelDownloadHandler(TaskHandler):
             log_with_context(f"Skipped download. File {scene_path} already exists", log_context)
         else:
             try:
-                generic_stac_item: dict = self._create_generic_stac_item(scene["id"])
-                generic_stac_item["properties"].update(scene)
-
-                eoproduct_scene: EOProduct = EOProduct.from_dict(generic_stac_item)
-
-                dag = EODataAccessGateway()
-
-                scene_path.parent.mkdir(parents=True, exist_ok=True)
                 log_with_context(
                     f"Downloading {scene['id']} (Destination: {scene_path})",
                     log_context,
                 )
+
+                generic_stac_item: dict = self._create_generic_stac_item(scene["id"])
+                generic_stac_item["properties"].update(scene)
+                eoproduct_scene: EOProduct = EOProduct.from_dict(generic_stac_item)
+                scene_path.parent.mkdir(parents=True, exist_ok=True)
+
+                # disable eodag progress bar logging
+                setup_logging(verbose=2, no_progress_bar=True)
+                dag = EODataAccessGateway()
                 dag.download(
                     product=eoproduct_scene,
                     extract=False,
@@ -302,11 +303,11 @@ class SentinelUnzipHandler(TaskHandler):
 
             time_end = time.perf_counter()
             log_with_context(
-                f"Successfully unzipped {scene['scene_id']} to: {output_dir}, {format_duration(time_end - time_start)}",
+                f"Successfully unzipped {zip_file} to: {output_dir}, {format_duration(time_end - time_start)}",
                 log_context,
             )
 
-            return task.complete(global_variables={"scene_folder": os.path.join(output_dir, scene["scene_id"])})
+            return task.complete(global_variables={"scene_folder": os.path.join(output_dir, scene["id"])})
 
         except zipfile.BadZipFile as e:
             return task.failure(
@@ -346,7 +347,7 @@ class SentinelCheckIntegrityHandler(TaskHandler):
             )
 
         try:
-            validity = sentinel.validate_integrity(scene_folder, scene["scene_id"])
+            validity = sentinel.validate_integrity(scene_folder, scene["id"])
         except Exception as e:
             return task.failure(
                 error_message="Error checking integrity",
@@ -355,7 +356,7 @@ class SentinelCheckIntegrityHandler(TaskHandler):
                 retry_timeout=0,
             )
 
-        log_with_context(f"Successfully checked integrity for {scene['scene_id']}", log_context)
+        log_with_context(f"Successfully checked integrity for {scene['id']}", log_context)
 
         return task.complete(global_variables={"validity": validity})
 
@@ -370,7 +371,7 @@ class SentinelExtractMetadataHandler(TaskHandler):
 
         # get job variables
         scene = task.get_variable("scene")
-        scene_id = scene["scene_id"]
+        scene_id = scene["id"]
         scene_folder = task.get_variable("scene_folder")
         collections_dir = self.get_config("collections_dir", os.path.dirname(__file__))
         log_with_context(f"Input variables: {scene_folder=}, {scene_id=}", log_context)
@@ -395,7 +396,7 @@ class SentinelExtractMetadataHandler(TaskHandler):
                 retry_timeout=0,
             )
 
-        log_with_context(f"Successfully extracted metadata for {scene['scene_id']}", log_context)
+        log_with_context(f"Successfully extracted metadata for {scene['id']}", log_context)
 
         return task.complete(global_variables={"stac_item": str(stac_item)})
 
