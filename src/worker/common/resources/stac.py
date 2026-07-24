@@ -174,14 +174,14 @@ def register_metadata(
             headers["Authorization"] = f"Bearer {api_token}"
 
         api_action = "insert"
-        r = session.post(
-            "%s/collections/%s/items" % (api_url, stac.collection_id), json=stac.to_dict(), headers=headers
-        )
+        url = os.path.join(api_url, "collections", stac.collection_id, "items")
+        r = session.post(url, json=stac.to_dict(), headers=headers)
         if r.status_code == 409:
             # Product already exists -> update
             stac.properties["updated"] = str(datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
             api_action = "update"
-            r = session.put("%s/collections/%s/items/%s" % (api_url, stac.collection_id, stac.id), json=stac.to_dict())
+            url = os.path.join(api_url, "collections", stac.collection_id, "items", stac.id)
+            r = session.put(url, json=stac.to_dict())
 
         if r.status_code >= 300:
             raise Exception(

@@ -310,7 +310,8 @@ class SentinelUnzipHandler(TaskHandler):
             # Consider naming convention of zipped/unzipped files
             # Downloaded zip: S2C_MSIL2A_20241122T104401_N0511_R008_T32UMB_20260624T191334.zip
             # Extracted zip: S2C_MSIL2A_20241122T104401_N0511_R008_T32UMB_20260624T191334.SAFE
-            return task.complete(global_variables={"scene_folder": os.path.join(output_dir, scene["id"], ".SAFE")})
+            scene_folder = os.path.join(output_dir, scene["id"]) + ".SAFE"
+            return task.complete(global_variables={"scene_folder": scene_folder})
 
         except zipfile.BadZipFile as e:
             return task.failure(
