@@ -238,7 +238,6 @@ class SentinelDownloadHandler(TaskHandler):
             )
 
         collection = sentinel.get_collection_name(scene["id"])
-        log_with_context(f"{collection=}")
         return task.complete(global_variables={"zip_file": str(scene_path), "collection": str(collection)})
 
     def _get_scene_path(self, base_dir, scene):
