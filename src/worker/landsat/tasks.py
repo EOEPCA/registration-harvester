@@ -106,6 +106,7 @@ class LandsatDiscoverHandler(TaskHandler):
                     }
                     payload["eodag:provider"] = scene.provider
                     payload["id"] = scene.properties["id"]
+                    payload["collection"] = collection
                     scene_essentials.append(payload)
 
         except Exception as e:
@@ -191,6 +192,7 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
                         }
                         payload["eodag:provider"] = scene.provider
                         payload["id"] = scene.properties["id"]
+                        payload["collection"] = collection
                         scene_essentials.append(payload)
 
             except Exception as e:
@@ -432,9 +434,15 @@ class LandsatRegisterMetadataHandler(TaskHandler):
                 # Get token to access protected endpoints of catalog
                 token = self.iam_client.get_access_token()
 
+            # Determine collection
+            if "collection" in scene:
+                collection = scene["collection"].replace("_", "-")
+            else:
+                raise ValueError("Scene does not contain a collection")
+
             stac.register_metadata(
                 stac_file=scene_stac_file,
-                collection=scene["collection"],
+                collection=collection,
                 api_url=api_url,
                 api_user=api_user,
                 api_pw=api_pw,
