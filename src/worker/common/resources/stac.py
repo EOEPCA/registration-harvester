@@ -181,7 +181,7 @@ def register_metadata(
             stac.properties["updated"] = str(datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
             api_action = "update"
             url = os.path.join(api_url, "collections", stac.collection_id, "items", stac.id)
-            r = session.put(url, json=stac.to_dict())
+            r = session.put(url, json=stac.to_dict(), headers=headers)
 
         if r.status_code >= 300:
             raise Exception(
