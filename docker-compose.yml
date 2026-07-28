@@ -43,15 +43,13 @@ services:
             - CONFIG_FILE_PATH=/worker/config/harvester.yaml
             - OPERATON_REST_USER=${OPERATON_REST_USER}
             - OPERATON_REST_PASSWORD=${OPERATON_REST_PASSWORD}
-            - M2M_USER=${M2M_USER}
-            - M2M_PASSWORD=${M2M_PASSWORD}
             - EODAG__USGS__API__CREDENTIALS__USERNAME=${M2M_USER}
             - EODAG__USGS__API__CREDENTIALS__PASSWORD=${M2M_PASSWORD}
             - IAM_CLIENT_ID=${IAM_CLIENT_ID}
             - IAM_CLIENT_SECRET=${IAM_CLIENT_SECRET}
         volumes:
             - ./config-landsat.yaml:/worker/config/harvester.yaml:ro
-            - /eodata:/eodata:rw            
+            - /eodata:/eodata:rw
         restart: always
 
     harvester-worker-sentinel:
@@ -63,8 +61,6 @@ services:
             - CONFIG_FILE_PATH=/worker/config/harvester.yaml
             - OPERATON_REST_USER=${OPERATON_REST_USER}
             - OPERATON_REST_PASSWORD=${OPERATON_REST_PASSWORD}
-            - CDSE_USER=${CDSE_USER}
-            - CDSE_PASSWORD=${CDSE_PASSWORD}
             - EODAG__COP_DATASPACE__AUTH__CREDENTIALS__USERNAME=${CDSE_USER}
             - EODAG__COP_DATASPACE__AUTH__CREDENTIALS__PASSWORD=${CDSE_PASSWORD}
             - IAM_CLIENT_ID=${IAM_CLIENT_ID}
@@ -102,10 +98,10 @@ services:
             - ./config-tutorial.yaml:/worker/config/harvester.yaml:ro
         restart: always                
 
-networks:
-  operaton-network:
-    driver: bridge
-
 volumes:
   postgres-data:
     driver: local
+
+networks:
+  operaton-network:
+    driver: bridge

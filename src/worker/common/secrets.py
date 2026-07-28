@@ -5,10 +5,6 @@ class WorkerSecrets:
     def __init__(self):
         # get secrets from enviroment
         self.secrets = {}
-        self.secrets["cdse_user"] = os.environ["CDSE_USER"] if "CDSE_USER" in os.environ else ""
-        self.secrets["cdse_password"] = os.environ["CDSE_PASSWORD"] if "CDSE_PASSWORD" in os.environ else ""
-        self.secrets["m2m_user"] = os.environ["M2M_USER"] if "M2M_USER" in os.environ else ""
-        self.secrets["m2m_password"] = os.environ["M2M_PASSWORD"] if "M2M_PASSWORD" in os.environ else ""
         self.secrets["operaton_rest_user"] = (
             os.environ["OPERATON_REST_USER"] if "OPERATON_REST_USER" in os.environ else ""
         )
