@@ -47,6 +47,9 @@
     <bpmn:callActivity id="sentinel_scene_ingestion" name="Sentinel Scene Ingestion" calledElement="sentinel-scene-ingestion">
       <bpmn:extensionElements>
         <camunda:in source="scene" target="scene" />
+            <camunda:in source="otelLocalRootTraceContext" target="otelParentTraceContext" />
+<!--        <camunda:in source="otelTraceContext" target="otelTraceContext" />-->
+<!--        <camunda:in source="otelRootTraceContext" target="otelRootTraceContext" />-->
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_1k4n5o7</bpmn:incoming>
       <bpmn:outgoing>Flow_0kbc8tw</bpmn:outgoing>

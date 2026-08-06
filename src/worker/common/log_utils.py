@@ -15,12 +15,11 @@ def configure_logging():
 def log_with_context(message, context=None, log_level="info", **kwargs):
     context = context if context is not None else {}
     log_function = __get_log_function(log_level)
-
     log_context_prefix = __get_log_context_prefix(context)
-    if log_context_prefix:
-        log_function(f"{log_context_prefix} {message}", **kwargs)
-    else:
-        log_function(message, **kwargs)
+    extra = kwargs.pop("extra", {})
+    extra.update(context)
+    text = f"{log_context_prefix} {message}" if log_context_prefix else message
+    log_function(text, extra=extra, **kwargs)
 
 
 def __get_log_context_prefix(context):

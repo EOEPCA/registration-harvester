@@ -76,7 +76,7 @@ class WorkerManager:
                     executor.submit(
                         external_task_worker.subscribe,
                         topic,
-                        handler.execute,
+                        handler.execute_wrapper,
                         process_variables=process_variables,
                     )
                     # Save worker and its config

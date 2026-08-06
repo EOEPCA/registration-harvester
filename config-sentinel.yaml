@@ -1,6 +1,6 @@
 log_level: INFO
 bpm_engine:
-  url: https://registration-harvester-bpm-engine.develop.eoepca.org/engine-rest
+  url: http://localhost:8080/engine-rest
   lock_duration: 300000  # 5 minutes
   retries: 3
   retry_timeout: 30000  # 30 seconds
@@ -9,7 +9,7 @@ bpm_engine:
   sleep_seconds: 15
   http_timeout_millis: 420000 # 7 minutes
 iam:
-  enabled: true
+  enabled: false
   oidc_token_endpoint_url: https://iam-auth.develop.eoepca.org/realms/eoepca/protocol/openid-connect/token    
 topics:
   sentinel_ondemand_discovery:
@@ -22,13 +22,13 @@ topics:
     module: worker.sentinel.tasks
     handler: SentinelContinuousDiscoveryHandler
     lock_duration: 600000   # 10 minutes
-    workers: 1
+    workers: 0
     parallel_tasks: 1
   sentinel_download_scene:
     module: worker.sentinel.tasks
     handler: SentinelDownloadHandler
     lock_duration: 1800000  # 30 minutes
-    workers: 1
+    workers: 2
     parallel_tasks: 1
   sentinel_unzip:
     module: worker.sentinel.tasks
@@ -65,7 +65,7 @@ handlers:
     collections: S2_MSI_L2A
   SentinelDownloadHandler:
     retryTimeout: 10
-    download_base_dir: "/eodata/sentinel"
+    download_base_dir: "/home/hols_sm/projekte/registration-harvester/temp_data"
     download_retry_wait_time_minutes: 1
     download_retry_timeout_minutes: 10    
   SentinelUnzipHandler:

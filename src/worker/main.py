@@ -7,12 +7,15 @@ from fastapi import FastAPI
 from worker.common.config import worker_config
 from worker.common.log_utils import configure_logging
 from worker.common.manager import WorkerManager
+from worker.common.open_telemetry import init_telemetry
 
 stop_event = threading.Event()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    SERVICE_NAME = "sentinel-worker"
+    init_telemetry(service_name=SERVICE_NAME)
     logging.info("Configure logging")
     configure_logging()
 
