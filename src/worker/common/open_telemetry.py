@@ -19,6 +19,7 @@ from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
 def init_telemetry(service_name: str, endpoint: str = "http://localhost:4317") -> None:
     """Initialisiert das komplette OpenTelemetry Setup (Logs, Traces, Metrics)."""
@@ -58,7 +59,7 @@ def init_telemetry(service_name: str, endpoint: str = "http://localhost:4317") -
     )
 
     # Gemeinsame Ressource definieren
-    app_resource = Resource.create({"service.name": f"{service_name}-"})
+    app_resource = Resource.create({"service.name": f"{service_name}"})
 
     # 1. SETUP: OpenTelemetry Logging
     logger_provider = LoggerProvider(resource=app_resource)
@@ -70,7 +71,7 @@ def init_telemetry(service_name: str, endpoint: str = "http://localhost:4317") -
     # Python Standard-Logging mit OTel verknüpfen
     handler = LoggingHandler(logger_provider=logger_provider)
     logging.getLogger().addHandler(handler)
-    logging.getLogger().setLevel(logging.INFO)
+    # logging.getLogger().setLevel(logging.INFO)
 
     # 2. SETUP: OpenTelemetry Metriken
     metric_exporter = OTLPMetricExporter(endpoint=endpoint, insecure=True)
@@ -83,3 +84,5 @@ def init_telemetry(service_name: str, endpoint: str = "http://localhost:4317") -
     trace_provider = TracerProvider(resource=app_resource)
     trace_provider.add_span_processor(BatchSpanProcessor(trace_exporter))
     trace.set_tracer_provider(trace_provider)
+
+    RequestsInstrumentor().instrument()

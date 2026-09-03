@@ -15,9 +15,9 @@ stop_event = threading.Event()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     SERVICE_NAME = "sentinel-worker"
-    init_telemetry(service_name=SERVICE_NAME)
     logging.info("Configure logging")
     configure_logging()
+    init_telemetry(service_name=SERVICE_NAME)
 
     logging.info("Start worker threads and subscribe to topics")
     t = threading.Thread(target=start_worker_threads)

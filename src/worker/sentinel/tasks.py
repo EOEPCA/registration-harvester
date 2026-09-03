@@ -19,14 +19,10 @@ configure_logging()
 from dotenv import load_dotenv
 
 load_dotenv()
-# username = os.environ.get('EODAG__COP_DATASPACE__AUTH__CREDENTIALS__USERNAME')
-# password = os.environ.get('EODAG__COP_DATASPACE__AUTH__CREDENTIALS__PASSWORD')
-# print(f"Nutzername: \n\n\n{username}\n\n\n")
-
 
 # Tracer für dieses Modul/diese Klasse holen
 tracer = trace.get_tracer(__name__)
-meter = metrics.get_meter("operaton.worker.demo") #todo: welchen Einfluss haben Bezeichnungen?
+meter = metrics.get_meter(__name__)
 
 scenes_found = meter.create_histogram(
     "demo__scenes_found_count", unit="1",
@@ -79,7 +75,11 @@ class SentinelDiscoverHandler(TaskHandler):
 
             if collections is None:
                 # Fehler im Span dokumentieren
-                span.set_status(trace.StatusCode.ERROR, "Missing input variable 'collections'")
+                span.set_status(StatusCode.ERROR, "Missing input variable 'collections'")
+
+                log_context["error_details"] = f"Process input variable 'collections' is mandatory and must have a non-empty value"
+                log_with_context(f"Missing input variable", log_context, log_level="error")
+
                 return task.failure(
                     error_message="Missing input variable",
                     error_details="Process input variable 'collections' is mandatory and must have a non-empty value",
@@ -140,11 +140,33 @@ class SentinelDiscoverHandler(TaskHandler):
                                 if idx == 3:
                                     break  # for testing just one
 
+                            if len(scene_essentials) != len(scenes):
+                                current_span = trace.get_current_span()
+
+                                # Eine Warnung als Event registrieren
+                                current_span.add_event(
+                                    name="warning",
+                                    attributes={
+                                        "warning.message": f"Only {len(scene_essentials)} of {len(scenes)} scenes were processed",
+                                        "warning.type": "PartialProcessingWarning",
+                                        "processed_count": len(scene_essentials),
+                                        "total_count": len(scenes),
+                                        "missing_count": len(scenes) - len(scene_essentials)
+                                    }
+                                )
+
+                                log_context["error_details"] = f"Only {len(scene_essentials)} of {len(scenes)} scenes were processed"
+                                log_with_context(f"Data mismatch", log_context, log_level="warning")
+
+
         except Exception as e:
             # Fehler im aktuellen aktiven Root-Span abfangen
             current_span = trace.get_current_span()
             current_span.record_exception(e)
-            current_span.set_status(trace.StatusCode.ERROR, str(e))
+            current_span.set_status(StatusCode.ERROR, str(e))
+
+            log_context["error_details"] = str(e)
+            log_with_context(f"Error occurred searching scenes", log_context, log_level="error")
 
             return task.failure(
                 error_message="Error searching scenes",
@@ -298,7 +320,10 @@ class SentinelDownloadHandler(TaskHandler):
                 # Fehler im aktuellen Root-Span (oder Subspan) erfassen
                 current_span = trace.get_current_span()
                 current_span.record_exception(e)
-                current_span.set_status(Status(StatusCode.ERROR, str(e)))
+                current_span.set_status(StatusCode.ERROR, str(e))
+
+                log_context["error_details"] = str(e)
+                log_with_context(f"Download failed for {scene['id']}", log_context, log_level="error")
 
                 return task.failure(
                     error_message="Download failed",
@@ -311,7 +336,7 @@ class SentinelDownloadHandler(TaskHandler):
             file_size = scene_path.stat().st_size
             duration = time_end - time_start
 
-            # NEU: als Metrik erfassen (zusätzlich zum bestehenden Logging)
+            # als Metrik erfassen (zusätzlich zum bestehenden Logging)
             download_bytes.record(file_size, attributes={"topic_name": task.get_topic_name()})
             download_duration.record(duration, attributes={"topic_name": task.get_topic_name()})
 
@@ -372,6 +397,10 @@ class SentinelUnzipHandler(TaskHandler):
 
             if not zip_file or not os.path.exists(zip_file) or not zip_file.endswith(".zip"):
                 validate_span.set_status(StatusCode.ERROR, "Invalid or missing ZIP file path")
+
+                log_context["error_details"] = f"Path to the downloaded zip file is missing or invalid zip file"
+                log_with_context(f"Invalid input for {scene['id']}", log_context, log_level="error")
+
                 return task.failure(
                     error_message="Invalid input",
                     error_details="Path to the downloaded zip file is missing or invalid zip file",
@@ -386,7 +415,6 @@ class SentinelUnzipHandler(TaskHandler):
             with tracer.start_as_current_span("unzip_extract_archive") as extract_span:
                 extract_span.set_attribute("file.output_directory", output_dir)
 
-                # Wenn bekannt, kannst du hier via zip_ref die Anzahl der Dateien loggen
                 with zipfile.ZipFile(zip_file, "r") as zip_ref:
                     extract_span.set_attribute("file.zipped_files_count", len(zip_ref.namelist()))
                     zip_ref.extractall(output_dir)
@@ -412,6 +440,10 @@ class SentinelUnzipHandler(TaskHandler):
             current_span = trace.get_current_span()
             current_span.record_exception(e)
             current_span.set_status(StatusCode.ERROR, f"Bad ZIP file: {str(e)}")
+
+            log_context["error_details"] = f"Invalid zip file {zip_file}: {str(e)}"
+            log_with_context(f"An Exception occurred for {scene['id']}", log_context, log_level="error")
+
             return task.failure(
                 error_message="Invalid zip file",
                 error_details=f"Invalid zip file {zip_file}: {str(e)}",
@@ -422,6 +454,10 @@ class SentinelUnzipHandler(TaskHandler):
             current_span = trace.get_current_span()
             current_span.record_exception(e)
             current_span.set_status(StatusCode.ERROR, str(e))
+
+            log_context["error_details"] =f"Error extracting zip file {zip_file}: {str(e)}"
+            log_with_context(f"An Exception occurred for {scene['id']}", log_context, log_level="error")
+
             return task.failure(
                 error_message="Error extracting zip file",
                 error_details=f"Error extracting zip file {zip_file}: {str(e)}",
@@ -452,6 +488,8 @@ class SentinelCheckIntegrityHandler(TaskHandler):
 
             if not scene_folder or not os.path.exists(scene_folder):
                 validate_span.set_status(StatusCode.ERROR, "Scene folder missing or does not exist")
+                log_context["error_details"] = "Scene folder missing or does not exist"
+                log_with_context(f"An Exception occurred for {scene['id']}", log_context, log_level="error")
                 return task.failure(
                     error_message="Missing or invalid input variable",
                     error_details=f"The variable scene_folder is missing or path {scene_folder} does not exist",
@@ -468,7 +506,11 @@ class SentinelCheckIntegrityHandler(TaskHandler):
         except Exception as e:
             current_span = trace.get_current_span()
             current_span.record_exception(e)
-            current_span.set_status(Status(StatusCode.ERROR, str(e)))
+            current_span.set_status(StatusCode.ERROR, str(e))
+
+            log_context["error_details"] = str(e)
+            log_with_context(f"An Exception occurred for {scene['id']}", log_context, log_level="error")
+
             return task.failure(
                 error_message="Error checking integrity",
                 error_details=str(e),
@@ -476,10 +518,9 @@ class SentinelCheckIntegrityHandler(TaskHandler):
                 retry_timeout=0,
             )
 
-        log_with_context(f"Successfully checked integrity for {scene['id']}", log_context)
-
         # SUBSPAN 3: Task-Abschluss
         with tracer.start_as_current_span("integrity_finalize_task"):
+            log_with_context(f"Successfully checked integrity for {scene['id']}", log_context)
             return task.complete(global_variables={"validity": validity})
 
 

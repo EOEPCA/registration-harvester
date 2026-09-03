@@ -40,7 +40,7 @@ topics:
     module: worker.sentinel.tasks
     handler: SentinelCheckIntegrityHandler
     lock_duration: 1800000  # 30 minutes
-    workers: 1
+    workers: 4
     parallel_tasks: 1
   sentinel_extract_metadata:
     module: worker.sentinel.tasks
