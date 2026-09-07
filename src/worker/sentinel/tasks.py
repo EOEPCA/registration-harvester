@@ -6,7 +6,7 @@ from pathlib import Path
 from eodag import EODataAccessGateway, EOProduct, setup_logging
 from operaton.external_task.external_task import ExternalTask, TaskResult
 from opentelemetry import trace, metrics
-from opentelemetry.trace import Status, StatusCode
+from opentelemetry.trace import StatusCode
 
 from worker.common.datasets import sentinel
 from worker.common.log_utils import configure_logging, format_duration, format_file_metrics, log_with_context
@@ -16,35 +16,40 @@ from worker.common.task_handler import TaskHandler
 
 configure_logging()
 
+# dotenv for credentials for demo setup only
 from dotenv import load_dotenv
-
 load_dotenv()
 
-# Tracer für dieses Modul/diese Klasse holen
+# Get the tracer/meter for this module/class
 tracer = trace.get_tracer(__name__)
 meter = metrics.get_meter(__name__)
 
 scenes_found = meter.create_histogram(
     "demo__scenes_found_count", unit="1",
-    description="Anzahl gefundener Scenes pro Discovery-Lauf",
+    description="Number of scenes found per discovery run",
 )
 
-# Metrik-Definitionen, Modulebene
+# Metric Definitions, Module Level
 download_bytes = meter.create_histogram(
     "demo__scene_download_bytes", unit="By",
-    description="Größe heruntergeladener Sentinel-Dateien",
+    description="Size of downloaded Sentinel files",
 )
 
 download_duration = meter.create_histogram(
     "demo__scene_download_duration_seconds", unit="s",
-    description="Dauer des reinen Download-Vorgangs (ohne Cache-Hits)",
+    description="Duration of the download process itself (excluding cache hits)",
 )
 
 class SentinelDiscoverHandler(TaskHandler):
     def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Searches for new Sentinel data
-        ...
+
+        Variables needed:
+            collection(s)?
+
+        Variables set:
+            scenes: List of scenes found
         """
 
         log_context = {
@@ -55,7 +60,7 @@ class SentinelDiscoverHandler(TaskHandler):
 
         log_with_context("Discovering new Sentinel data ...", log_context)
 
-        # SUBSPAN 1: Parameter-Parsing und Validierung
+        # SUBSPAN 1: Parameter Parsing and Validation
         with tracer.start_as_current_span("parse_and_validate_inputs") as span:
             param_collections = task.get_variable("collections")
             param_datetime_interval = task.get_variable("datetime_interval")
@@ -74,7 +79,7 @@ class SentinelDiscoverHandler(TaskHandler):
             page_size = self.get_config("page_size", 1000)
 
             if collections is None:
-                # Fehler im Span dokumentieren
+                # Document errors in the Span
                 span.set_status(StatusCode.ERROR, "Missing input variable 'collections'")
 
                 log_context["error_details"] = f"Process input variable 'collections' is mandatory and must have a non-empty value"
@@ -92,13 +97,13 @@ class SentinelDiscoverHandler(TaskHandler):
         try:
             dag = EODataAccessGateway()
 
-            # SUBSPAN 2: Die API-Suche (EODAG)
+            # SUBSPAN 2: The API Search (EODAG)
             with tracer.start_as_current_span("eodag_search_all") as search_span:
-                # Attribute helfen beim Filtern in Jaeger/Grafana
+                # Attributes Help with Filtering in Jaeger/Grafana
                 search_span.set_attribute("collections.count", len(collections))
 
                 for collection in collections:
-                    # Optional: Ein eigener Subspan pro Collection, falls es viele sind
+                    # Optional: A separate subspan for each collection, if there are many
                     with tracer.start_as_current_span(f"search_collection_{collection}"):
                         scenes = dag.search_all(
                             provider="cop_dataspace",
@@ -111,13 +116,13 @@ class SentinelDiscoverHandler(TaskHandler):
 
                         log_with_context(f"Number of scenes found: {len(scenes)}", log_context)
 
-                        # NEU: pro Collection separat erfassen
+                        # set scenes count for each collection separately
                         scenes_found.record(
                             len(scenes),
                             attributes={"topic_name": task.get_topic_name(), "collection": collection},
                         )
 
-                        # SUBSPAN 3: Datenverarbeitung / Data Transformation
+                        # SUBSPAN 3: Data Processing / Data Transformation
                         with tracer.start_as_current_span("process_scene_properties") as proc_span:
                             proc_span.set_attribute("scenes.count", len(scenes))
 
@@ -138,12 +143,12 @@ class SentinelDiscoverHandler(TaskHandler):
                                 payload["id"] = scene.properties["id"]
                                 scene_essentials.append(payload)
                                 if idx == 3:
-                                    break  # for testing just one
+                                    break  # for testing just three scenes
 
                             if len(scene_essentials) != len(scenes):
                                 current_span = trace.get_current_span()
 
-                                # Eine Warnung als Event registrieren
+                                # Register a warning as an event
                                 current_span.add_event(
                                     name="warning",
                                     attributes={
@@ -160,7 +165,7 @@ class SentinelDiscoverHandler(TaskHandler):
 
 
         except Exception as e:
-            # Fehler im aktuellen aktiven Root-Span abfangen
+            # Catch exceptions in the currently active root span
             current_span = trace.get_current_span()
             current_span.record_exception(e)
             current_span.set_status(StatusCode.ERROR, str(e))
@@ -267,7 +272,7 @@ class SentinelDownloadHandler(TaskHandler):
         scene = task.get_variable("scene")
         log_with_context(f"Input variables: {scene=}", context=log_context, log_level="debug")
 
-        # SUBSPAN 1: Pfad-Berechnung und Cache-/Existenz-Prüfung
+        # SUBSPAN 1: Path Calculation and Cache/Existence Check
         with tracer.start_as_current_span("prepare_download_metadata") as prep_span:
             if scene and "id" in scene:
                 prep_span.set_attribute("scene.id", scene["id"])
@@ -292,14 +297,14 @@ class SentinelDownloadHandler(TaskHandler):
                     log_context,
                 )
 
-                # SUBSPAN 2: STAC / EOProduct Vorbereitung
+                # SUBSPAN 2: STAC / EOProduct Preparation
                 with tracer.start_as_current_span("build_eoproduct_metadata"):
                     generic_stac_item: dict = self._create_generic_stac_item(scene["id"])
                     generic_stac_item["properties"].update(scene)
                     eoproduct_scene: EOProduct = EOProduct.from_dict(generic_stac_item)
                     scene_path.parent.mkdir(parents=True, exist_ok=True)
 
-                # SUBSPAN 3: Der eigentliche Netzwerk-Download (I/O-intensiv)
+                # SUBSPAN 3: The actual network download (I/O-intensive)
                 with tracer.start_as_current_span("eodag_download_file") as download_span:
                     download_span.set_attribute("download.timeout_minutes", download_retry_timeout_minutes)
                     download_span.set_attribute("download.retry_wait_minutes", download_retry_wait_time_minutes)
@@ -317,7 +322,7 @@ class SentinelDownloadHandler(TaskHandler):
                     )
 
             except Exception as e:
-                # Fehler im aktuellen Root-Span (oder Subspan) erfassen
+                # Log errors in the current root span (or subspan)
                 current_span = trace.get_current_span()
                 current_span.record_exception(e)
                 current_span.set_status(StatusCode.ERROR, str(e))
@@ -336,7 +341,7 @@ class SentinelDownloadHandler(TaskHandler):
             file_size = scene_path.stat().st_size
             duration = time_end - time_start
 
-            # als Metrik erfassen (zusätzlich zum bestehenden Logging)
+            # Record as a metric (in addition to existing logging)
             download_bytes.record(file_size, attributes={"topic_name": task.get_topic_name()})
             download_duration.record(duration, attributes={"topic_name": task.get_topic_name()})
 
@@ -345,7 +350,7 @@ class SentinelDownloadHandler(TaskHandler):
                 log_context,
             )
 
-        # SUBSPAN 4: Post-Processing / Finalisierung
+        # SUBSPAN 4: Post-Processing / Finalization
         with tracer.start_as_current_span("finalize_download_task") as final_span:
             collection = sentinel.get_collection_name(scene["id"])
             final_span.set_attribute("scene.collection_name", str(collection))
@@ -374,7 +379,12 @@ class SentinelUnzipHandler(TaskHandler):
     def execute(self, task: ExternalTask, config: dict = None) -> TaskResult:
         """
         Unzips the downloaded Sentinel data file.
-        ...
+
+        Variables needed:
+            zip_file: Path to the downloaded zip file
+
+        Variables set:
+            scene_folder: Path to the unzipped scene folder
         """
         log_context = {
             "WORKER_ID": task.get_worker_id(),
@@ -383,7 +393,7 @@ class SentinelUnzipHandler(TaskHandler):
         }
         time_start = time.perf_counter()
 
-        # SUBSPAN 1: Parameter-Validierung
+        # SUBSPAN 1: Parameter-Validation
         with tracer.start_as_current_span("unzip_validate_inputs") as validate_span:
             zip_file = task.get_variable("zip_file")
             scene = task.get_variable("scene")
@@ -411,7 +421,7 @@ class SentinelUnzipHandler(TaskHandler):
         try:
             output_dir = os.path.dirname(zip_file)
 
-            # SUBSPAN 2: Festplatten-I/O (Entpacken)
+            # SUBSPAN 2: Hard Disk I/O (Extraction)
             with tracer.start_as_current_span("unzip_extract_archive") as extract_span:
                 extract_span.set_attribute("file.output_directory", output_dir)
 
@@ -419,7 +429,7 @@ class SentinelUnzipHandler(TaskHandler):
                     extract_span.set_attribute("file.zipped_files_count", len(zip_ref.namelist()))
                     zip_ref.extractall(output_dir)
 
-            # SUBSPAN 3: Bereinigung (Optionaler Datei-Delete)
+            # SUBSPAN 3: Cleanup (Optional File Deletion)
             if remove_zip:
                 with tracer.start_as_current_span("unzip_remove_source_zip"):
                     os.remove(zip_file)
@@ -430,7 +440,7 @@ class SentinelUnzipHandler(TaskHandler):
                 log_context,
             )
 
-            # SUBSPAN 4: Task-Abschluss und Pfad-Generierung
+            # SUBSPAN 4: Task Completion and Path Generation
             with tracer.start_as_current_span("unzip_finalize_task") as final_span:
                 scene_folder = os.path.join(output_dir, scene["id"]) + ".SAFE"
                 final_span.set_attribute("file.extracted_scene_folder", scene_folder)
@@ -475,7 +485,7 @@ class SentinelCheckIntegrityHandler(TaskHandler):
             "TOPIC_NAME": task.get_topic_name(),
         }
 
-        # SUBSPAN 1: Input-Validierung
+        # SUBSPAN 1: Input-Validation
         with tracer.start_as_current_span("integrity_validate_inputs") as validate_span:
             scene = task.get_variable("scene")
             scene_folder = task.get_variable("scene_folder")
@@ -498,7 +508,7 @@ class SentinelCheckIntegrityHandler(TaskHandler):
                 )
 
         try:
-            # SUBSPAN 2: Eigentlicher Integrity Check (Rechen- und I/O-intensiv)
+            # SUBSPAN 2: Actual Integrity Check
             with tracer.start_as_current_span("integrity_run_validation") as check_span:
                 validity = sentinel.validate_integrity(scene_folder, scene["id"])
                 check_span.set_attribute("integrity.is_valid", validity)
@@ -518,7 +528,7 @@ class SentinelCheckIntegrityHandler(TaskHandler):
                 retry_timeout=0,
             )
 
-        # SUBSPAN 3: Task-Abschluss
+        # SUBSPAN 3: Task-completion
         with tracer.start_as_current_span("integrity_finalize_task"):
             log_with_context(f"Successfully checked integrity for {scene['id']}", log_context)
             return task.complete(global_variables={"validity": validity})

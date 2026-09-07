@@ -14,7 +14,7 @@ stop_event = threading.Event()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    SERVICE_NAME = "sentinel-worker"
+    SERVICE_NAME = "sentinel-worker"    # Should have a generalized name in case of additional data or tasks
     logging.info("Configure logging")
     configure_logging()
     init_telemetry(service_name=SERVICE_NAME)

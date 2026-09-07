@@ -18,26 +18,26 @@ meter = metrics.get_meter(__name__)
 
 task_counter = meter.create_counter(
     "demo__tasks_processed_total", unit="1",
-    description="Gesamtanzahl der verarbeiteten Operaton-Tasks",
+    description="Total number of processed operation tasks",
 )
 
 task_duration = meter.create_histogram(
     "demo__task_duration_seconds", unit="s",
-    description="Dauer der Task-Ausführung (self.execute) pro Topic",
+    description="Duration of task execution (self.execute) per topic",
 )
 task_retries = meter.create_histogram(
     "demo__task_retries", unit="1",
-    description="Retry-Anzahl beim Abschluss eines Tasks",
+    description="Number of retries when completing a task",
 )
 tasks_in_flight = meter.create_up_down_counter(
     "demo__tasks_in_flight", unit="1",
-    description="Aktuell parallel laufende Tasks pro Topic",
+    description="Number of tasks currently running in parallel per topic",
 )
 
-# Zwei-Variablen-Mapping-Ansatz ist notwendig, um rekursiv voneinander unabhängige root Traces (für main- und
-# call-activity-workflows) zu erzeugen und trotzdem bottom-up miteinander zu verlinken
-LOCAL_ROOT_VAR = "otelLocalRootTraceContext"     # stabil PRO Prozessinstanz (Haupt- oder Sub-) --- Wird nach erstem Task gesetzt und behalten?
-PARENT_CONTEXT_VAR = "otelParentTraceContext"    # nur beim ALLERERSTEN Task einer Instanz relevant
+# A two-variable mapping approach is necessary to recursively generate mutually independent root traces (for main and
+# call-activity workflows) and still link them together bottom-up
+LOCAL_ROOT_VAR = "otelLocalRootTraceContext"     #  Constant per process instance (main or sub)
+PARENT_CONTEXT_VAR = "otelParentTraceContext"    # Relevant only for the VERY FIRST task of an instance
 
 class TaskHandler:
     TIMEOUT_1_MINUTE = 60000
@@ -63,19 +63,19 @@ class TaskHandler:
     def execute_wrapper(self, task: ExternalTask, config: dict = None) -> TaskResult:
         topic_name = task.get_topic_name()
 
-        # --- Tracing-Setup (None zu Beginn eines Durchlaufs(einer Instanz), sowohl im Main als auch in Call-Activities) ---
+        # --- Tracing Setup (None at the start of a run (of an instance), both in Main and Call Activities) ---
         local_root = task.get_variable(LOCAL_ROOT_VAR)
 
         if local_root:
-            # Die Prozessinstanz hat schon einen Gruppierungs-Span -> einfach daran anhängen
-            # greift erst im Call-Activity Sub-Workflow
+            # The process instance already has a grouping span? -> just append it
+            # Takes effect only in the Call-Activity sub-workflow
             parent_ctx = extract({"traceparent": local_root})
             ctx_token = attach(parent_ctx)
         else:
-            # ist bei erstem Task eines Workflows ebenfalls None; wird bei Übergang zu Call-Activity durch Mapping gesetzt
+            # is also None for the first task in a workflow; it is set via mapping when transitioning to a Call activity
             incoming_parent = task.get_variable(PARENT_CONTEXT_VAR)
-            links = [] # beim ersten Workflow-Task leer und wird nur bei folgenden Call-Activity Tasks initial gefüllt
-            if incoming_parent: # ist ab erster Call-Activity true und speichert Link zu Gruppierungsspan für Cross-Process-Trace-Linking
+            links = [] # Is empty for the first workflow task and is only populated for subsequent Call Activity tasks
+            if incoming_parent: # Is true starting with the first call activity and stores a link to the grouping span for cross-process trace linking
                 remote_ctx = extract({"traceparent": incoming_parent})
                 remote_span_ctx = trace.get_current_span(remote_ctx).get_span_context()
                 if remote_span_ctx.is_valid:
@@ -83,13 +83,13 @@ class TaskHandler:
 
             workflow_label = self._get_workflow_label(task)
 
-            # Kein attach(outer_ctx) mehr -> neuer eigenständiger Trace,
-            # nur per Link mit dem aufrufenden Prozess verbunden
-            # Root-Span zur Gruppierung und damit besseren Übersicht (hat keine eigene Logik)
+            # No more `attach(outer_ctx)` -> new standalone trace,
+            # connected to the calling process only via a link
+            # Root span for grouping and thus a better overview (has no logic of its own)
             with tracer.start_as_current_span(
                     f"Execute:{workflow_label}_workflow",
-                    context=Context(),  # explizit leer, sonst evtl. versehentlich geerbter Parent
-                    links=links,    # Links bei main task leer, bei Call-Activity Instanz befüllt
+                    context=Context(),  # Explicitly empty; otherwise, the parent may have been inherited by mistake
+                    links=links,    # Links is empty in the main task, but is populated in the Call Activity instance
             ) as group_span:
                 carrier = {}
                 inject(carrier, context=set_span_in_context(group_span))
@@ -104,7 +104,7 @@ class TaskHandler:
             "TOPIC_NAME": topic_name,
         }
         try:
-            # --- Metrik 4: In-Flight-Counter hochzählen, BEVOR execute() läuft ---
+            # --- Metric 1: Increment the in-flight counter BEFORE `execute()` runs ---
             tasks_in_flight.add(1, attributes={"topic_name": topic_name})
 
             with tracer.start_as_current_span(
@@ -119,13 +119,13 @@ class TaskHandler:
                 try:
                     result = self.execute(task, config or {})
 
-                    # --- Metrik 1: Dauer messen (erfolgreicher Durchlauf) ---
+                    # --- Metric 2: Measure Duration (Successful Run) ---
                     task_duration.record(
                         time.monotonic() - start,
                         attributes={"topic_name": topic_name},
                     )
 
-                    # --- Metrik 2: Status-Counter ---
+                    # --- Metric 3: Status-Counter ---
                     status = self._infer_result_status(result)
                     task_counter.add(1, attributes={"topic_name": topic_name, "status": status})
 
@@ -136,7 +136,7 @@ class TaskHandler:
                     span.set_status(StatusCode.OK)
                     return result
                 except Exception as e:
-                    # --- Metrik 1 (Fehlerfall) + Metrik 2 ---
+                    # --- Metric 2 (Error Case) + Metric 3 ---
                     task_duration.record(
                         time.monotonic() - start,
                         attributes={"topic_name": topic_name},
@@ -145,15 +145,15 @@ class TaskHandler:
 
                     span.record_exception(e)
                     span.set_status(StatusCode.ERROR)
-                    log_with_context(f"Unerwarteter Fehler: {e}", log_context, log_level="error")
+                    log_with_context(f"Unexpected error: {e}", log_context, log_level="error")
                     raise
         finally:
-            # --- Metrik 3: Retry-Anzahl beim Abschluss (egal ob Erfolg/Fehler) ---
+            # --- Metric 4: Number of retries upon completion (regardless of success or failure) ---
             retries = task._context.get("retries")
             if retries is not None:
                 task_retries.record(retries, attributes={"topic_name": topic_name})
 
-            # --- Metrik 4: In-Flight-Counter wieder runterzählen ---
+            # --- Metric 1: Count down the in-flight counter again ---
             tasks_in_flight.add(-1, attributes={"topic_name": topic_name})
 
             detach(ctx_token)

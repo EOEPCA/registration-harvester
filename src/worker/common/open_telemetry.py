@@ -2,18 +2,18 @@ import logging
 from opentelemetry import metrics, trace
 from opentelemetry.sdk.resources import Resource
 
-# Metrics Komponenten
+# Metrics components
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.metrics.view import View, ExplicitBucketHistogramAggregation
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 
-# Tracing Komponenten
+# Tracing components
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
-# Logging Komponenten
+# Logging components
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
@@ -22,7 +22,7 @@ from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
 def init_telemetry(service_name: str, endpoint: str = "http://localhost:4317") -> None:
-    """Initialisiert das komplette OpenTelemetry Setup (Logs, Traces, Metrics)."""
+    """Initializes the entire OpenTelemetry setup (logs, traces, metrics)."""
 
     scenes_view = View(
         instrument_name="demo__scenes_found_count",
@@ -58,7 +58,7 @@ def init_telemetry(service_name: str, endpoint: str = "http://localhost:4317") -
         ),
     )
 
-    # Gemeinsame Ressource definieren
+    # Define a Shared Resource
     app_resource = Resource.create({"service.name": f"{service_name}"})
 
     # 1. SETUP: OpenTelemetry Logging
@@ -68,18 +68,18 @@ def init_telemetry(service_name: str, endpoint: str = "http://localhost:4317") -
     log_exporter = OTLPLogExporter(endpoint=endpoint, insecure=True)
     logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
 
-    # Python Standard-Logging mit OTel verknüpfen
+    # Python Standard-Logging with OTel
     handler = LoggingHandler(logger_provider=logger_provider)
     logging.getLogger().addHandler(handler)
     # logging.getLogger().setLevel(logging.INFO)
 
-    # 2. SETUP: OpenTelemetry Metriken
+    # 2. SETUP: OpenTelemetry metrics
     metric_exporter = OTLPMetricExporter(endpoint=endpoint, insecure=True)
     reader = PeriodicExportingMetricReader(metric_exporter, export_interval_millis=1000)
     meter_provider = MeterProvider(metric_readers=[reader], views=[scenes_view,download_bytes_view, task_duration_view, download_duration_view, task_retries_view], resource=app_resource)
     metrics.set_meter_provider(meter_provider)
 
-    # 3. SETUP: OpenTelemetry Tracing
+    # 3. SETUP: OpenTelemetry tracing
     trace_exporter = OTLPSpanExporter(endpoint=endpoint, insecure=True)
     trace_provider = TracerProvider(resource=app_resource)
     trace_provider.add_span_processor(BatchSpanProcessor(trace_exporter))

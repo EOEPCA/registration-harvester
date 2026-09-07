@@ -47,7 +47,7 @@
     <bpmn:callActivity id="sentinel_scene_ingestion" name="Sentinel Scene Ingestion" calledElement="sentinel-scene-ingestion">
       <bpmn:extensionElements>
         <camunda:in source="scene" target="scene" />
-<!--        Mapping von otelLocalRootTraceContext auf otelParentTraceContext bei Start der Call-Activity-->
+<!--        Mapping of otelLocalRootTraceContext to otelParentTraceContext when the call activity starts-->
             <camunda:in source="otelLocalRootTraceContext" target="otelParentTraceContext" />
 <!--        <camunda:in source="otelTraceContext" target="otelTraceContext" />-->
 <!--        <camunda:in source="otelRootTraceContext" target="otelRootTraceContext" />-->
