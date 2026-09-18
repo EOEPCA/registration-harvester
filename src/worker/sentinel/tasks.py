@@ -7,12 +7,10 @@ from eodag import EODataAccessGateway, EOProduct, setup_logging
 from operaton.external_task.external_task import ExternalTask, TaskResult
 
 from worker.common.datasets import sentinel
-from worker.common.log_utils import configure_logging, format_duration, format_file_metrics, log_with_context
+from worker.common.log_utils import format_duration, format_file_metrics, log_with_context
 from worker.common.resources import stac
 from worker.common.search_interval import determine_search_interal
 from worker.common.task_handler import TaskHandler
-
-configure_logging()
 
 
 class SentinelDiscoverHandler(TaskHandler):
@@ -47,7 +45,7 @@ class SentinelDiscoverHandler(TaskHandler):
 
         start_time, end_time = param_datetime_interval.split("/")
 
-        page_size = self.get_config("page_size", 1000)
+        page_size = self.handler_config.get("page_size", 1000)
 
         if collections is None:
             return task.failure(
@@ -121,18 +119,18 @@ class SentinelContinuousDiscoveryHandler(TaskHandler):
 
         scene_essentials = []
 
-        if self.get_config("enabled", False):
+        if self.handler_config.get("enabled", False):
             log_with_context("Continuous discovery of new Sentinel data ...", log_context)
 
             # Handle config input
-            page_size = self.get_config("page_size", 1000)
-            timewindow_hours = self.get_config("timewindow_hours", 1)
-            start_time, end_time = determine_search_interal(task, timewindow_hours)
-            param_collections = self.get_config("collections", "")
+            page_size = self.handler_config.get("page_size", 1000)
+            timewindow_hours = self.handler_config.get("timewindow_hours", 1)
+            start_time, end_time = determine_search_interal(self.worker_config, task, timewindow_hours)
+            param_collections = self.handler_config.get("collections", "")
             collections = (
                 param_collections.split(",") if param_collections is not None and len(param_collections) > 0 else None
             )
-            param_bbox = self.get_config("bbox", "")
+            param_bbox = self.handler_config.get("bbox", "")
             bbox = param_bbox.split(",") if param_bbox is not None and len(param_bbox) > 0 else None
 
             try:
@@ -194,9 +192,9 @@ class SentinelDownloadHandler(TaskHandler):
         # TODO: Calculate scene path according to
         # https://gitlab.dlr.de/terrabyte/data-management/ingestion/terrabyte-ingestion-lib/-/blob/main/
         # terrabyte/ingestion/providers/esa_cdse.py#L241-251
-        scene_path = Path(self._get_scene_path(self.get_config("download_base_dir", "/tmp"), scene))
-        download_retry_wait_time_minutes = self.get_config("download_retry_wait_time_minutes", 0.2)
-        download_retry_timeout_minutes = self.get_config("download_retry_timeout_minutes", 10)
+        scene_path = Path(self._get_scene_path(self.handler_config.get("download_base_dir", "/tmp"), scene))
+        download_retry_wait_time_minutes = self.handler_config.get("download_retry_wait_time_minutes", 0.2)
+        download_retry_timeout_minutes = self.handler_config.get("download_retry_timeout_minutes", 10)
 
         if os.path.exists(scene_path):
             log_with_context(f"Skipped download. File {scene_path} already exists", log_context)
@@ -279,7 +277,7 @@ class SentinelUnzipHandler(TaskHandler):
         # get job variables
         zip_file = task.get_variable("zip_file")
         scene = task.get_variable("scene")
-        remove_zip = self.get_config("remove_zip", False)
+        remove_zip = self.handler_config.get("remove_zip", False)
         log_with_context(f"Input variables: {zip_file=}", log_context)
 
         if not zip_file or not os.path.exists(zip_file) or not zip_file.endswith(".zip"):
@@ -376,7 +374,7 @@ class SentinelExtractMetadataHandler(TaskHandler):
         scene = task.get_variable("scene")
         scene_id = scene["id"]
         scene_folder = task.get_variable("scene_folder")
-        collections_dir = self.get_config("collections_dir", os.path.dirname(__file__))
+        collections_dir = self.handler_config.get("collections_dir", os.path.dirname(__file__))
         log_with_context(f"Input variables: {scene_folder=}, {scene_id=}", log_context)
 
         if not scene_folder or not os.path.exists(scene_folder) or not scene_id or not scene:
@@ -413,14 +411,14 @@ class SentinelRegisterMetadataHandler(TaskHandler):
         }
 
         # get config
-        api_url = self.get_config("stac_api_url", "")
-        api_user = self.get_config("stac_api_user", None)
-        api_pw = self.get_config("stac_api_pw", None)
-        api_ca_cert = self.get_config("stac_api_ca_cert", None)
-        file_deletion = self.get_config("stac_file_deletion", True)
+        api_url = self.handler_config.get("stac_api_url", "")
+        api_user = self.handler_config.get("stac_api_user", None)
+        api_pw = self.handler_config.get("stac_api_pw", None)
+        api_ca_cert = self.handler_config.get("stac_api_ca_cert", None)
+        file_deletion = self.handler_config.get("stac_file_deletion", True)
 
         # Asset href rewriting
-        rewrite_asset_hrefs = self.get_config("rewrite_asset_hrefs", None)
+        rewrite_asset_hrefs = self.handler_config.get("rewrite_asset_hrefs", None)
 
         # get job variables
         scene = task.get_variable("scene")

@@ -8,8 +8,6 @@ from pystac import Collection, Extent, SpatialExtent, TemporalExtent
 
 from worker.common.iam import IAMClient
 
-logger = logging.getLogger()
-
 collection_id = "landsat-8-l1"
 data_catalog_api_url = "https://eoapi.apx.develop.eoepca.org/stac"
 iam_oidc_token_endpoint_url = "https://iam-auth.apx.develop.eoepca.org/realms/eoepca/protocol/openid-connect/token"
@@ -42,7 +40,7 @@ def oidc_client():
 
 
 def test_create_collection(collection, oidc_client):
-    logger.info("Authenticate and request access token")
+    logging.info("Authenticate and request access token")
     token = oidc_client.get_access_token()
 
     # delete collection in case its already there
@@ -50,7 +48,7 @@ def test_create_collection(collection, oidc_client):
         url=f"{data_catalog_api_url}/collections/{collection_id}", headers={"Authorization": f"Bearer {token}"}
     )
 
-    logger.info("Creating collection")
+    logging.info("Creating collection")
     token = oidc_client.get_access_token()
     response = requests.post(
         f"{data_catalog_api_url}/collections",
@@ -60,11 +58,11 @@ def test_create_collection(collection, oidc_client):
     assert response.status_code == 201
     time.sleep(2)
 
-    logger.info("Checking if collection was created")
+    logging.info("Checking if collection was created")
     response = requests.get(f"{data_catalog_api_url}/collections/{collection_id}")
     assert response.status_code == 200
 
-    logger.info("Deleting previously created collection")
+    logging.info("Deleting previously created collection")
     token = oidc_client.get_access_token()
     response = requests.delete(
         url=f"{data_catalog_api_url}/collections/{collection_id}", headers={"Authorization": f"Bearer {token}"}

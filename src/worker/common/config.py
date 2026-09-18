@@ -1,26 +1,34 @@
-import os
 from pathlib import Path
+from typing import Any
 
 import yaml
 
 
 class WorkerConfig:
-    def __init__(self):
-        self.config_worker = {}
-        config_path_default = Path(__file__).parent.parent.parent.parent / "config.yaml"
-        config_path = os.environ.get("CONFIG_FILE_PATH", config_path_default)
-        with open(config_path) as f:
-            self.config_worker = yaml.safe_load(f)
+    """
+    Load a YAML config file into a dictionary.
+    """
+
+    def __init__(self, config_path: Path):
+        self.data = None
+
+        if not config_path.is_file():
+            raise FileNotFoundError(f"Config file not found: {config_path}")
+
+        with config_path.open("r", encoding="utf-8") as f:
+            self.data = yaml.safe_load(f)
+
+        if self.data is None:
+            raise ValueError(f"Expected top-level YAML mapping in {config_path}, got None")
+
+        if not isinstance(self.data, dict):
+            raise ValueError(f"Expected top-level YAML mapping in {config_path}, got {type(self.data).__name__}")
 
     def get_all(self) -> dict:
-        return self.config_worker
+        return self.data
 
-    def get(self, key: str) -> dict:
+    def get(self, key: str, default: Any = None) -> dict:
         if key is not None and len(key) > 0:
-            return self.config_worker[key]
+            return self.data.get(key, default)
         else:
             return {}
-
-
-# Expose Config object for app to import
-worker_config = WorkerConfig()

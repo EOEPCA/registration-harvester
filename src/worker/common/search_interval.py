@@ -4,10 +4,12 @@ from dateutil.parser import parse
 from operaton.client.engine_client import EngineClient
 from operaton.external_task.external_task import ExternalTask
 
-from worker.common.config import worker_config
+from worker.common.config import WorkerConfig
 
 
-def determine_search_interal(task: ExternalTask, timedelta_hours: float) -> tuple[str, str]:
+def determine_search_interal(
+    worker_config: WorkerConfig, task: ExternalTask, timedelta_hours: float
+) -> tuple[str, str]:
     engine_config = worker_config.get("bpm_engine")
     client = EngineClient(engine_base_url=engine_config.get("url"), config=engine_config)
     # TODO Add get_process_instance_history to operaton external task client

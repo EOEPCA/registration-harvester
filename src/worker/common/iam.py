@@ -3,8 +3,6 @@ import logging
 
 import requests
 
-logger = logging.getLogger()
-
 
 class IAMClient:
     def __init__(self, token_endpoint_url, client_id, client_secret):
@@ -19,10 +17,10 @@ class IAMClient:
         now = datetime.datetime.now()
         if self._access_token is not None and self._access_token_expiration_date is not None:
             if self._access_token_expiration_date < now:
-                logger.info("Current token expired. Updating...")
+                logging.info("Current token expired. Updating...")
                 self.update_token()
             else:
-                logger.info(f"Current token still valid. Expires at {self._access_token_expiration_date}")
+                logging.info(f"Current token still valid. Expires at {self._access_token_expiration_date}")
         else:
             # no token has been acquired before
             self.update_token()
@@ -47,4 +45,4 @@ class IAMClient:
         now = datetime.datetime.now()
         self._access_token_expiration_date = now + datetime.timedelta(seconds=response.get("expires_in"))
         self._access_token = response.get("access_token")
-        logger.info(f"Successfully acquired token which expires at {self._access_token_expiration_date}")
+        logging.info(f"Successfully acquired token which expires at {self._access_token_expiration_date}")

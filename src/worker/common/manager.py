@@ -5,23 +5,19 @@ from concurrent.futures.thread import ThreadPoolExecutor
 
 from operaton.external_task.external_task_worker import ExternalTaskWorker
 
-from worker.common.config import worker_config
-from worker.common.log_utils import configure_logging
+from worker.common.config import WorkerConfig
 from worker.common.secrets import worker_secrets
-
-logger = logging.getLogger()
-configure_logging()
 
 
 class WorkerManager:
     """ """
 
-    def __init__(self, shutdown_event):
+    def __init__(self, config: WorkerConfig, shutdown_event):
         self.shutdown_event = shutdown_event
         self.exernal_task_worker = {}
-        self._create_workers_from_config()
+        self._create_workers_from_config(config)
 
-    def _create_workers_from_config(self):
+    def _create_workers_from_config(self, worker_config):
         # Global task settings
         engine_config = worker_config.get("bpm_engine")
         task_config = {
@@ -29,7 +25,7 @@ class WorkerManager:
             "lockDuration": engine_config.get("lock_duration", 300000),
             "retries": engine_config.get("retries", 3),
             "retryTimeout": engine_config.get("retry_timeout", 30000),
-            "isDebug": worker_config.get_all().get("is_debug", False),
+            "isDebug": worker_config.get("is_debug", False),
             "asyncResponseTimeout": engine_config.get("async_response_timeout", 30000),
             "sleepSeconds": engine_config.get("sleep_seconds", 15),
             "httpTimeoutMillis": engine_config.get("http_timeout_millis", 420000),
@@ -42,7 +38,7 @@ class WorkerManager:
 
         # Total number of needed worker threads
         num_workers_total = sum(topic.get("workers", 1) for _, topic in worker_config.get("topics").items())
-        logger.info(f"Total number of needed worker threads: {num_workers_total}")
+        logging.info(f"Total number of needed worker threads: {num_workers_total}")
 
         # Subscribe
         with ThreadPoolExecutor(max_workers=num_workers_total) as executor:
@@ -50,7 +46,7 @@ class WorkerManager:
                 # Create TaskHandler instance for each topic and save it to map
                 module = importlib.import_module(topic_config.get("module"))
                 handler_class = getattr(module, topic_config.get("handler"))
-                handler = handler_class(worker_config.get("handlers"))
+                handler = handler_class(worker_config)
 
                 # Update task_config with topic specific configuration
                 if "sleep_seconds" in topic_config:
@@ -85,7 +81,7 @@ class WorkerManager:
                     #    "start_time": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                     #    "settings": task_config,
                     # }
-                    logger.info(f"Successfully subscribed worker {worker_id} to topic {topic}")
+                    logging.info(f"Successfully subscribed worker {worker_id} to topic {topic}")
 
     def subscriptions_info(self):
         workers = {}

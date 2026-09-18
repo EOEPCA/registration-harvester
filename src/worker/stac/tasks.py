@@ -10,11 +10,9 @@ from httpx import HTTPStatusError
 from operaton.external_task.external_task import ExternalTask, TaskResult
 from pystac import Catalog, Collection, Item, Link, RelType, StacIO
 
-from worker.common.log_utils import configure_logging, log_with_context
+from worker.common.log_utils import log_with_context
 from worker.common.search_interval import determine_search_interal
 from worker.common.task_handler import TaskHandler
-
-configure_logging()
 
 
 class StacCatalogHandler(TaskHandler):
@@ -172,7 +170,7 @@ class StacCollectionHandler(TaskHandler):
             stac_api_destination_url = task.get_variable("stac_api_destination_url")
             if not stac_api_destination_url:
                 # Try to get it from config
-                stac_api_destination_url = self.get_config("stac_api_destination_url", None)
+                stac_api_destination_url = self.handler_config.get("stac_api_destination_url", None)
 
             if not stac_api_destination_url:
                 raise ValueError("Missing required input variable or configuration: stac_api_destination_url")
@@ -180,7 +178,7 @@ class StacCollectionHandler(TaskHandler):
             if stac_api_destination_url.endswith("/"):
                 stac_api_destination_url = stac_api_destination_url[:-1]
 
-            auth = (self.get_config("stac_api_user", None), self.get_config("stac_api_pw", None))
+            auth = (self.handler_config.get("stac_api_user", None), self.handler_config.get("stac_api_pw", None))
             if not auth[0] or not auth[1]:
                 auth = None
 
@@ -218,8 +216,8 @@ class StacCollectionHandler(TaskHandler):
                         bbox = param_bbox.split(",") if param_bbox is not None and len(param_bbox) > 0 else None
 
                         if datetime_interval is None:
-                            timewindow_hours = self.get_config("timewindow_hours", 1)
-                            start_time, end_time = determine_search_interal(task, timewindow_hours)
+                            timewindow_hours = self.handler_config.get("timewindow_hours", 1)
+                            start_time, end_time = determine_search_interal(self.worker_config, task, timewindow_hours)
                             datetime_interval = f"{start_time}/{end_time}"
 
                         log_with_context(
@@ -379,7 +377,7 @@ class StacItemHandler(TaskHandler):
             stac_api_destination_url = task.get_variable("stac_api_destination_url")
             if not stac_api_destination_url:
                 # Try to get from config
-                stac_api_destination_url = str(self.get_config("stac_api_destination_url", None))
+                stac_api_destination_url = str(self.handler_config.get("stac_api_destination_url", None))
 
             if not stac_api_destination_url:
                 raise ValueError("Missing required input variable or configuration: stac_api_destination_url")
@@ -387,7 +385,7 @@ class StacItemHandler(TaskHandler):
             if stac_api_destination_url.endswith("/"):
                 stac_api_destination_url = stac_api_destination_url[:-1]
 
-            auth = (self.get_config("stac_api_user", None), self.get_config("stac_api_pw", None))
+            auth = (self.handler_config.get("stac_api_user", None), self.handler_config.get("stac_api_pw", None))
             if not auth[0] or not auth[1]:
                 auth = None
 

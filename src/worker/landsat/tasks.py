@@ -6,12 +6,10 @@ from operaton.external_task.external_task import ExternalTask, TaskResult
 
 from worker.common.base.file import untar_file
 from worker.common.datasets import landsat
-from worker.common.log_utils import configure_logging, log_with_context
+from worker.common.log_utils import log_with_context
 from worker.common.resources import stac
 from worker.common.search_interval import determine_search_interal
 from worker.common.task_handler import TaskHandler
-
-configure_logging()
 
 
 class LandsatDiscoverHandler(TaskHandler):
@@ -38,7 +36,7 @@ class LandsatDiscoverHandler(TaskHandler):
         log_with_context("Discovering new Landsat data ...", log_context)
 
         # Configuration
-        page_size = self.get_config("page_size", 100)
+        page_size = self.handler_config.get("page_size", 100)
 
         # Process variables
         param_collections = task.get_variable("collections")
@@ -143,21 +141,21 @@ class LandsatContinuousDiscoveryHandler(TaskHandler):
 
         scene_essentials = []
 
-        if self.get_config("enabled", False):
+        if self.handler_config.get("enabled", False):
             log_with_context("Continuous discovery of new Landsat data ...", log_context)
 
             # Handle input variables
-            page_size = self.get_config("page_size", 100)
-            param_collections = self.get_config("collections", "")
+            page_size = self.handler_config.get("page_size", 100)
+            param_collections = self.handler_config.get("collections", "")
             collections = (
                 param_collections.split(",") if param_collections is not None and len(param_collections) > 0 else None
             )
-            param_bbox = self.get_config("bbox", "")
+            param_bbox = self.handler_config.get("bbox", "")
             bbox = param_bbox.split(",") if param_bbox is not None and len(param_bbox) > 0 else None
 
             # Create query for time window
-            timewindow_hours = self.get_config("timewindow_hours", 1)
-            start_time, end_time = determine_search_interal(task, timewindow_hours)
+            timewindow_hours = self.handler_config.get("timewindow_hours", 1)
+            start_time, end_time = determine_search_interal(self.worker_config, task, timewindow_hours)
 
             ingest_filter = {"start": start_time, "end": end_time}
             scene_filter_input = {"ingestFilter": ingest_filter}
@@ -232,11 +230,11 @@ class LandsatDownloadHandler(TaskHandler):
 
         log_with_context("Downloading scene %s" % (scene["id"]), log_context)
 
-        base_dir = self.get_config("download_base_dir", "/tmp")
+        base_dir = self.handler_config.get("download_base_dir", "/tmp")
         temp_dir = landsat.get_scene_id_folder(scene["id"])
         download_dir = os.path.join(base_dir, temp_dir)
-        download_retry_wait_time_minutes = self.get_config("download_retry_wait_time_minutes", 0.2)
-        download_retry_timeout_minutes = self.get_config("download_retry_timeout_minutes", 10)
+        download_retry_wait_time_minutes = self.handler_config.get("download_retry_wait_time_minutes", 0.2)
+        download_retry_timeout_minutes = self.handler_config.get("download_retry_timeout_minutes", 10)
         log_with_context(
             f"Download parameter: dir={download_dir} wait={download_retry_wait_time_minutes} timeout={download_retry_timeout_minutes}",
             log_context,
@@ -316,8 +314,8 @@ class LandsatUntarHandler(TaskHandler):
         }
 
         tar_file = task.get_variable("tar_file")
-        remove_tar = self.get_config("remove_tar", False)
-        create_folder = self.get_config("create_folder", True)
+        remove_tar = self.handler_config.get("remove_tar", False)
+        create_folder = self.handler_config.get("create_folder", True)
         log_with_context(f"Untar downloaded scene {tar_file} ...", log_context)
 
         if not os.path.exists(tar_file):
@@ -409,14 +407,14 @@ class LandsatRegisterMetadataHandler(TaskHandler):
         log_with_context(f"Register metadata for item {scene['id']} and stac file {scene_stac_file} ...", log_context)
         # log_with_context(json.dumps(scene))
 
-        api_url = self.get_config("stac_api_url", "")
-        api_user = self.get_config("stac_api_user", None)
-        api_pw = self.get_config("stac_api_pw", None)
-        api_ca_cert = self.get_config("stac_api_ca_cert", None)
-        file_deletion = self.get_config("stac_file_deletion", True)
+        api_url = self.handler_config.get("stac_api_url", "")
+        api_user = self.handler_config.get("stac_api_user", None)
+        api_pw = self.handler_config.get("stac_api_pw", None)
+        api_ca_cert = self.handler_config.get("stac_api_ca_cert", None)
+        file_deletion = self.handler_config.get("stac_file_deletion", True)
 
         # Asset href rewriting
-        rewrite_asset_hrefs = self.get_config("rewrite_asset_hrefs", None)
+        rewrite_asset_hrefs = self.handler_config.get("rewrite_asset_hrefs", None)
 
         # validate input
         vars_not_set = self.validate([scene, scene_stac_file, api_url])

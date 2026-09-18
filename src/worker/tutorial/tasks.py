@@ -19,7 +19,7 @@ class TutorialDiscoverItemsTaskHandler(TaskHandler):
             # no input data needed for this task
 
             # get STAC API url from configuration
-            api_url = self.get_config("service_url", "https://stac.dataspace.copernicus.eu/v1/")
+            api_url = self.handler_config.get("service_url", "https://stac.dataspace.copernicus.eu/v1/")
 
             # 2. Perform task logic
             log_with_context(f"Searching STAC items using API: {api_url}", log_context)

@@ -223,9 +223,6 @@ def adapt_stac_metadata(scene_path):
     return stac_files
 
 
-log = logging.getLogger("Log Info")
-
-
 def modify_landsat_stac(stac_item: pystac.item.Item):
     """Modify the Asset-Keys and eo:bands:name for a Landsat L2 STAC-Item.
 
@@ -250,14 +247,14 @@ def modify_landsat_stac(stac_item: pystac.item.Item):
     input_dict = asset_changes[mission]
 
     for i, (current_key, target_key) in enumerate(input_dict.items()):
-        log.info(f"Replacing the current Asset-Key {current_key} with the new Asset-Key {target_key[0]}.")
+        logging.info(f"Replacing the current Asset-Key {current_key} with the new Asset-Key {target_key[0]}.")
         try:
             stac_item_dict["assets"][target_key[0]] = copy.deepcopy(stac_item_dict["assets"].pop(current_key))
             if "eo:bands" in stac_item_dict["assets"][target_key[0]]:
                 stac_item_dict["assets"][target_key[0]]["eo:bands"][0]["name"] = target_key[0]
                 stac_item_dict["assets"][target_key[0]]["title"] = target_key[1]
         except Exception:
-            log.info(f"{current_key} is not a Asset in this STAC-Item.")
+            logging.info(f"{current_key} is not a Asset in this STAC-Item.")
 
     if "proj:centroid" in stac_item_dict["properties"]:
         for key in stac_item_dict["properties"]["proj:centroid"]:
