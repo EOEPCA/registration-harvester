@@ -37,6 +37,10 @@ class WorkerManager:
         }
 
         # Total number of needed worker threads
+        if worker_config.get("topics") is None:
+            logging.warning("No topics configuration found, no workers will be started!")
+            return
+
         num_workers_total = sum(topic.get("workers", 1) for _, topic in worker_config.get("topics").items())
         logging.info(f"Total number of needed worker threads: {num_workers_total}")
 
