@@ -4,12 +4,12 @@ from pathlib import Path
 from eodag import EODataAccessGateway, EOProduct, setup_logging
 from operaton.external_task.external_task import ExternalTask, TaskResult
 
-from worker.common.base.file import untar_file
-from worker.common.datasets import landsat
-from worker.common.log_utils import log_with_context
-from worker.common.resources import stac
-from worker.common.search_interval import determine_search_interal
-from worker.common.task_handler import TaskHandler
+from harvester.common.base.file import untar_file
+from harvester.common.datasets import landsat
+from harvester.common.log_utils import log_with_context
+from harvester.common.resources import stac
+from harvester.common.search_interval import determine_search_interal
+from harvester.common.task_handler import TaskHandler
 
 
 class LandsatDiscoverHandler(TaskHandler):

@@ -9,9 +9,9 @@ from pathlib import Path
 import yaml
 from fastapi import APIRouter, FastAPI
 
-from worker.common.config import WorkerConfig
-from worker.common.log_utils import build_logging_config
-from worker.common.manager import WorkerManager
+from harvester.common.config import WorkerConfig
+from harvester.common.log_utils import build_logging_config
+from harvester.common.manager import WorkerManager
 
 # Default join timeout (seconds) when waiting for the worker threads to stop.
 WORKER_JOIN_TIMEOUT = 60.0

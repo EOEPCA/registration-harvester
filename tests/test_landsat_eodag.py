@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from operaton.external_task.external_task import ExternalTask
 
-from worker.landsat.tasks import LandsatContinuousDiscoveryHandler, LandsatDiscoverHandler, LandsatDownloadHandler
+from harvester.landsat.tasks import LandsatContinuousDiscoveryHandler, LandsatDiscoverHandler, LandsatDownloadHandler
 
 
 @pytest.fixture

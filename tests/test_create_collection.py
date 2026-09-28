@@ -6,7 +6,7 @@ import pytest
 import requests
 from pystac import Collection, Extent, SpatialExtent, TemporalExtent
 
-from worker.common.iam import IAMClient
+from harvester.common.iam import IAMClient
 
 collection_id = "landsat-8-l1"
 data_catalog_api_url = "https://eoapi.apx.develop.eoepca.org/stac"

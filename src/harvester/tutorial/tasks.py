@@ -2,8 +2,8 @@
 from operaton.external_task.external_task import ExternalTask, TaskResult
 from pystac_client import Client
 
-from worker.common.log_utils import log_with_context  # For logging
-from worker.common.task_handler import TaskHandler
+from harvester.common.log_utils import log_with_context  # For logging
+from harvester.common.task_handler import TaskHandler
 
 
 class TutorialDiscoverItemsTaskHandler(TaskHandler):

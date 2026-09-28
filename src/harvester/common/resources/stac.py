@@ -8,8 +8,8 @@ import requests
 from pystac.extensions.file import FileExtension
 from requests.auth import HTTPBasicAuth
 
-from worker.common.base.file import get_file_size, get_folder_size
-from worker.common.log_utils import log_with_context
+from harvester.common.base.file import get_file_size, get_folder_size
+from harvester.common.log_utils import log_with_context
 
 
 def extract_by_function_name(scene_path: str, function_name: str, stac_function_options: dict):

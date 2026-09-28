@@ -10,9 +10,9 @@ from httpx import HTTPStatusError
 from operaton.external_task.external_task import ExternalTask, TaskResult
 from pystac import Catalog, Collection, Item, Link, RelType, StacIO
 
-from worker.common.log_utils import log_with_context
-from worker.common.search_interval import determine_search_interal
-from worker.common.task_handler import TaskHandler
+from harvester.common.log_utils import log_with_context
+from harvester.common.search_interval import determine_search_interal
+from harvester.common.task_handler import TaskHandler
 
 
 class StacCatalogHandler(TaskHandler):

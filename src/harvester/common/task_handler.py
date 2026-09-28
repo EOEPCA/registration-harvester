@@ -1,8 +1,8 @@
 from operaton.external_task.external_task import ExternalTask, TaskResult
 
-from worker.common.config import WorkerConfig
-from worker.common.iam import IAMClient
-from worker.common.secrets import worker_secrets
+from harvester.common.config import WorkerConfig
+from harvester.common.iam import IAMClient
+from harvester.common.secrets import worker_secrets
 
 
 class TaskHandler:

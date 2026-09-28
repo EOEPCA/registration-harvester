@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 import operaton
 from operaton.external_task.external_task import ExternalTask
 
-from worker.sentinel.tasks import SentinelUnzipHandler
+from harvester.sentinel.tasks import SentinelUnzipHandler
 
 
 class TestSentinelUnzipHandler:

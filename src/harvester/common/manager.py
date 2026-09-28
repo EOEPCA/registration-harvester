@@ -5,8 +5,8 @@ from concurrent.futures.thread import ThreadPoolExecutor
 
 from operaton.external_task.external_task_worker import ExternalTaskWorker
 
-from worker.common.config import WorkerConfig
-from worker.common.secrets import worker_secrets
+from harvester.common.config import WorkerConfig
+from harvester.common.secrets import worker_secrets
 
 
 class WorkerManager:

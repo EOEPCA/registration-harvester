@@ -9,7 +9,7 @@ from datetime import datetime
 import pystac
 import requests
 
-from worker.common.resources.stac import (
+from harvester.common.resources.stac import (
     add_asset_filesize,
     extract_stactools,
 )

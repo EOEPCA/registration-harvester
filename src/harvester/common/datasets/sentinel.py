@@ -6,8 +6,8 @@ import xml.etree.ElementTree as ET
 
 import pystac
 
-from worker.common.base.file import calculate_checksum
-from worker.common.resources.stac import (
+from harvester.common.base.file import calculate_checksum
+from harvester.common.resources.stac import (
     add_asset_filesize,
     extract_stactools,
 )

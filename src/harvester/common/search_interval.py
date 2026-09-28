@@ -4,7 +4,7 @@ from dateutil.parser import parse
 from operaton.client.engine_client import EngineClient
 from operaton.external_task.external_task import ExternalTask
 
-from worker.common.config import WorkerConfig
+from harvester.common.config import WorkerConfig
 
 
 def determine_search_interal(

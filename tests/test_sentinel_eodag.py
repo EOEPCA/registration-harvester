@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from operaton.external_task.external_task import ExternalTask
 
-from worker.sentinel.tasks import (
+from harvester.sentinel.tasks import (
     SentinelContinuousDiscoveryHandler,
     SentinelDiscoverHandler,
     SentinelDownloadHandler,
