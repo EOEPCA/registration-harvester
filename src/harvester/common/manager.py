@@ -47,7 +47,11 @@ class WorkerManager:
         # Subscribe
         with ThreadPoolExecutor(max_workers=num_workers_total) as executor:
             for topic, topic_config in worker_config.get("topics").items():
-                # Create TaskHandler instance for each topic and save it to map
+                if topic_config.get("module") is None or topic_config.get("handler") in None:
+                    logging.warning("Invalid module/handler configuration in topics, no workers will be started!")
+                    return
+
+                # Create TaskHandler instance for each topic
                 module = importlib.import_module(topic_config.get("module"))
                 handler_class = getattr(module, topic_config.get("handler"))
                 handler = handler_class(worker_config)
