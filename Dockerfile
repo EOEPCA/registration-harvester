@@ -8,8 +8,8 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-WORKDIR /worker
-COPY . /worker
-RUN python -m pip install --no-cache-dir --upgrade /worker
+WORKDIR /harvester
+COPY . /harvester
+RUN python -m pip install --no-cache-dir --upgrade /harvester
 
-CMD ["fastapi", "run", "src/worker/main.py", "--port", "8080"]
+CMD ["fastapi", "run", "src/harvester/main.py", "--port", "8080"]

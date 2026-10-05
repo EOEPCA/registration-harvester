@@ -1,12 +1,12 @@
 import importlib
 import logging
+import os
 import socket
 from concurrent.futures.thread import ThreadPoolExecutor
 
 from operaton.external_task.external_task_worker import ExternalTaskWorker
 
 from harvester.common.config import WorkerConfig
-from harvester.common.secrets import worker_secrets
 
 
 class WorkerManager:
@@ -31,8 +31,8 @@ class WorkerManager:
             "httpTimeoutMillis": engine_config.get("http_timeout_millis", 420000),
             "timeoutDeltaMillis": engine_config.get("timeout_delta_millis", 300000),
             "auth_basic": {
-                "username": worker_secrets.get_secret("operaton_rest_user", ""),
-                "password": worker_secrets.get_secret("operaton_rest_password", ""),
+                "username": os.environ.get("OPERATON_REST_USER", ""),
+                "password": os.environ.get("OPERATON_REST_PASSWORD", ""),
             },
         }
 

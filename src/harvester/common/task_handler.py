@@ -1,8 +1,9 @@
+import os
+
 from operaton.external_task.external_task import ExternalTask, TaskResult
 
 from harvester.common.config import WorkerConfig
 from harvester.common.iam import IAMClient
-from harvester.common.secrets import worker_secrets
 
 
 class TaskHandler:
@@ -18,8 +19,8 @@ class TaskHandler:
         self.iam_client = None
         iam_config = self.worker_config.get("iam", None)
         if iam_config is not None and iam_config.get("enabled", False):
-            iam_client_id = worker_secrets.get_secret("iam_client_id", None)
-            iam_client_secret = worker_secrets.get_secret("iam_client_secret", None)
+            iam_client_id = os.environ.get("IAM_CLIENT_ID", None)
+            iam_client_secret = os.environ.get("IAM_CLIENT_SECRET", None)
             token_url = iam_config.get("oidc_token_endpoint_url", None)
             if token_url is not None and iam_client_id is not None and iam_client_secret is not None:
                 self.iam_client = IAMClient(

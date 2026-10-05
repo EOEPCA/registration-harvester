@@ -11,8 +11,8 @@ from harvester.common.iam import IAMClient
 collection_id = "landsat-8-l1"
 data_catalog_api_url = "https://eoapi.apx.develop.eoepca.org/stac"
 iam_oidc_token_endpoint_url = "https://iam-auth.apx.develop.eoepca.org/realms/eoepca/protocol/openid-connect/token"
-iam_client_id = "registration-harvester"
-iam_client_secret = "Uj1nOvyZ8iFdRN8Iqaik0OkXDS66INU3"
+iam_client_id = ""
+iam_client_secret = ""
 
 
 @pytest.fixture
